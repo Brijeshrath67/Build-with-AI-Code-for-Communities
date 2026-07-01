@@ -1,0 +1,63 @@
+-- Seed data for PHC Exchange
+
+-- Clear existing data
+TRUNCATE alerts, forecasts, feature_snapshots, transfers, stock, users, phcs, medicine_mappings CASCADE;
+
+-- 1. Insert PHCs
+-- UPHC Unit-9 and UPHC Unit-3 are about 1.5 km apart in Bangalore
+-- CHC Nelamangala is about 25 km away
+-- PHC Devanahalli is about 35 km away
+INSERT INTO phcs (id, name, district, latitude, longitude, type) VALUES
+(1, 'UPHC Unit-9', 'Bangalore Urban', 12.9715987, 77.5945627, 'UPHC'),
+(2, 'UPHC Unit-3', 'Bangalore Urban', 12.9815987, 77.6045627, 'UPHC'),
+(3, 'CHC Nelamangala', 'Bangalore Rural', 13.0987, 77.3912, 'CHC'),
+(4, 'PHC Devanahalli', 'Bangalore Rural', 13.2486, 77.7123, 'PHC');
+
+-- 2. Insert Users
+-- Password for all: 'password123' -> Bcrypt hash: '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS'
+INSERT INTO users (id, name, role, phone, password_hash, phc_id, status) VALUES
+(1, 'System Admin', 'System Admin', '9999999999', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', NULL, 'active'),
+(2, 'Asha Devi', 'ASHA Worker', '8888888888', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', 1, 'active'),
+(3, 'Dr. Ramesh', 'PHC Staff', '7777777777', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', 1, 'active'),
+(4, 'Dr. Suresh', 'PHC Staff', '6666666666', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', 2, 'active'),
+(5, 'District Officer Gupta', 'District Health Official', '5555555555', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', NULL, 'active');
+
+-- 3. Insert Starting Stocks
+-- UPHC Unit-9 has low Paracetamol (20) and normal Amoxicillin (500)
+-- UPHC Unit-3 has surplus Paracetamol (800) and low Amoxicillin (10)
+-- CHC Nelamangala and PHC Devanahalli have normal levels
+INSERT INTO stock (phc_id, medicine, quantity, expiry_date, sync_status) VALUES
+(1, 'Paracetamol 500mg', 20, '2026-12-31', 'synced'),
+(1, 'Amoxicillin 500mg', 500, '2026-10-31', 'synced'),
+(2, 'Paracetamol 500mg', 800, '2026-12-31', 'synced'),
+(2, 'Amoxicillin 500mg', 10, '2026-09-30', 'synced'),
+(3, 'Paracetamol 500mg', 300, '2027-01-31', 'synced'),
+(3, 'Amoxicillin 500mg', 400, '2026-11-30', 'synced'),
+(4, 'Paracetamol 500mg', 250, '2026-08-31', 'synced'), -- Expires soon!
+(4, 'Amoxicillin 500mg', 300, '2027-03-31', 'synced');
+
+-- 4. Insert Feature Snapshots (Consumption rates)
+-- UPHC Unit-9 consumes 15 Paracetamol/day, 5 Amoxicillin/day
+-- UPHC Unit-3 consumes 5 Paracetamol/day, 10 Amoxicillin/day
+INSERT INTO feature_snapshots (phc_id, medicine, consumption_rate, seasonal_index, disease_trend_signal) VALUES
+(1, 'Paracetamol 500mg', 15.0, 1.1, 0.1),
+(1, 'Amoxicillin 500mg', 5.0, 1.0, 0.0),
+(2, 'Paracetamol 500mg', 5.0, 1.0, 0.0),
+(2, 'Amoxicillin 500mg', 10.0, 1.2, 0.2),
+(3, 'Paracetamol 500mg', 8.0, 1.0, 0.0),
+(3, 'Amoxicillin 500mg', 6.0, 1.0, 0.0),
+(4, 'Paracetamol 500mg', 12.0, 1.1, 0.1),
+(4, 'Amoxicillin 500mg', 8.0, 1.0, 0.0);
+
+-- 5. Insert Medicine Naming Variants for Semantic Matching
+-- We'll store simple tf-idf or coordinate vectors. For simplicity, we can set vector arrays of size 5
+-- represent standard vectors
+INSERT INTO medicine_mappings (alias_name, standard_name, embedding) VALUES
+('PCM 500mg', 'Paracetamol 500mg', ARRAY[0.9, 0.1, 0.0, 0.0, 0.0]),
+('Crocin', 'Paracetamol 500mg', ARRAY[0.85, 0.15, 0.0, 0.0, 0.0]),
+('Paracetamol tab', 'Paracetamol 500mg', ARRAY[0.95, 0.05, 0.0, 0.0, 0.0]),
+('Amox 500', 'Amoxicillin 500mg', ARRAY[0.0, 0.9, 0.1, 0.0, 0.0]),
+('Amoxicillin capsule', 'Amoxicillin 500mg', ARRAY[0.0, 0.95, 0.05, 0.0, 0.0]),
+('Mox 500', 'Amoxicillin 500mg', ARRAY[0.0, 0.8, 0.2, 0.0, 0.0]),
+('Paracetamol 500mg', 'Paracetamol 500mg', ARRAY[1.0, 0.0, 0.0, 0.0, 0.0]),
+('Amoxicillin 500mg', 'Amoxicillin 500mg', ARRAY[0.0, 1.0, 0.0, 0.0, 0.0]);
