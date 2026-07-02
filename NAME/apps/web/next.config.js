@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: false, // Turn off strict mode to prevent double-mounts of Leaflet maps during dev
+  output: 'standalone',
+  reactStrictMode: false,
   typescript: {
-    ignoreBuildErrors: true, // Speeds up hackathon builds
+    ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,

@@ -1,6 +1,9 @@
+from urllib.parse import unquote
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List
+from pydantic import BaseModel
 from apps.api.app.core.database import get_db
 from apps.api.app.core.dependencies import get_current_active_user
 from apps.api.app.models.models import PHC, Stock, Transfer, Alert, Forecast, User
@@ -9,6 +12,31 @@ from datetime import datetime, timezone
 
 router = APIRouter()
 
+class NetworkPHC(BaseModel):
+    id: int
+    name: str
+    district: str
+    type: str
+    latitude: float
+    longitude: float
+    stocks: List[dict]
+
+class NetworkStatusResponse(BaseModel):
+    phcs: List[NetworkPHC]
+
+@router.get("/network", response_model=NetworkStatusResponse)
+def get_network_status(db: Session = Depends(get_db)):
+    phcs = db.query(PHC).order_by(PHC.id).all()
+    result = []
+    for p in phcs:
+        stocks = db.query(Stock).filter(Stock.phc_id == p.id).all()
+        result.append(NetworkPHC(
+            id=p.id, name=p.name, district=p.district, type=p.type,
+            latitude=p.latitude, longitude=p.longitude,
+            stocks=[{"medicine": s.medicine, "quantity": s.quantity, "expiry_date": str(s.expiry_date)} for s in stocks]
+        ))
+    return NetworkStatusResponse(phcs=result)
+
 @router.get("/district/{district_name}", response_model=DistrictDashboardResponse)
 def get_district_dashboard_data(
     district_name: str,
@@ -16,7 +44,7 @@ def get_district_dashboard_data(
     current_user: User = Depends(get_current_active_user)
 ):
     # Resolve district name formatting (e.g. replace %20 with space)
-    district_decoded = district_name.replace("%20", " ")
+    district_decoded = unquote(district_name)
     
     # If "all" is requested, aggregate district statistics across all areas
     if district_decoded.lower() == "all":

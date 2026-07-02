@@ -61,6 +61,18 @@ def update_stock(
         
     db.commit()
     db.refresh(db_stock)
+
+    try:
+        from apps.event_bus.bus import publish
+        publish("stock.updated", {
+            "phc_id": phc_id,
+            "medicine": stock_in.medicine,
+            "quantity": stock_in.quantity,
+            "expiry_date": str(stock_in.expiry_date),
+        })
+    except Exception:
+        pass
+
     return db_stock
 
 # Batch sync for offline queued updates

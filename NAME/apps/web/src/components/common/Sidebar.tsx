@@ -41,6 +41,15 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    href: '/redistribution',
+    label: 'Redistribution',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0l-4-4m4 4l-4 4M5 3v4m0 4v4m2-6h4a2 2 0 012 2v4a2 2 0 01-2 2H7a2 2 0 01-2-2v-4a2 2 0 012-2z" />
+      </svg>
+    ),
+  },
+  {
     href: '/analytics',
     label: 'District Map',
     icon: (
@@ -86,6 +95,9 @@ export default function Sidebar() {
   }, []);
 
   const handleLogout = () => {
+    if (user?.id) {
+      localStorage.removeItem(`phc_ai_conversation_${user.id}`);
+    }
     localStorage.removeItem('phc_token');
     localStorage.removeItem('phc_user');
     document.cookie = 'phc_token=; path=/; max-age=0; SameSite=Lax';

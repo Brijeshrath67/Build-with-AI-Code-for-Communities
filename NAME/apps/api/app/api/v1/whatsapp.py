@@ -6,7 +6,6 @@ from datetime import datetime, timezone, timedelta
 from apps.api.app.core.database import get_db
 from apps.api.app.core.config import settings
 from apps.api.app.models.models import User, Stock, PHC
-import xml.etree.ElementTree as ET
 
 router = APIRouter()
 
