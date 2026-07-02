@@ -1,13 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 from apps.api.app.core.database import get_db
-from apps.api.app.core.dependencies import get_current_active_user
+from apps.api.app.core.dependencies import RoleChecker, get_current_active_user
 from apps.api.app.models.models import PHC, Stock, Transfer, Alert, Forecast, User
 from apps.api.app.schemas.schemas import DistrictDashboardResponse, DashboardStockSummary, TransferResponse
 from datetime import datetime, timezone
 
 router = APIRouter()
+
+
+class ReassignDoctorRequest(BaseModel):
+    doctor_id: int
+    new_phc_id: int
 
 @router.get("/district/{district_name}", response_model=DistrictDashboardResponse)
 def get_district_dashboard_data(
@@ -106,3 +112,75 @@ def get_district_dashboard_data(
         stock_summaries=stock_summaries,
         recent_transfers=transfers
     )
+
+
+@router.get("/network")
+def get_network_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(RoleChecker(["District Health Official", "System Admin"])),
+):
+    phcs = db.query(PHC).options(
+        joinedload(PHC.stocks),
+        joinedload(PHC.users),
+    ).order_by(PHC.id).all()
+
+    return {
+        "total_phcs": len(phcs),
+        "phcs": [
+            {
+                "id": phc.id,
+                "name": phc.name,
+                "district": phc.district,
+                "type": phc.type,
+                "latitude": phc.latitude,
+                "longitude": phc.longitude,
+                "stocks": [
+                    {
+                        "medicine": stock.medicine,
+                        "quantity": stock.quantity,
+                        "expiry_date": stock.expiry_date,
+                    }
+                    for stock in sorted(phc.stocks, key=lambda item: (item.medicine, item.expiry_date))
+                ],
+                "doctors": [
+                    {
+                        "id": user.id,
+                        "name": user.name,
+                        "phone": user.phone,
+                        "status": user.status,
+                    }
+                    for user in sorted(phc.users, key=lambda item: item.id)
+                    if user.role == "PHC Staff"
+                ],
+            }
+            for phc in phcs
+        ],
+    }
+
+
+@router.post("/reassign-doctor")
+def reassign_doctor(
+    payload: ReassignDoctorRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(RoleChecker(["District Health Official", "System Admin"])),
+):
+    doctor = db.query(User).filter(
+        User.id == payload.doctor_id,
+        User.role == "PHC Staff",
+    ).first()
+    if not doctor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PHC staff doctor not found.")
+
+    target_phc = db.query(PHC).filter(PHC.id == payload.new_phc_id).first()
+    if not target_phc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target PHC not found.")
+
+    doctor.phc_id = target_phc.id
+    db.commit()
+    db.refresh(doctor)
+
+    return {
+        "detail": f"{doctor.name} reassigned to {target_phc.name}.",
+        "doctor_id": doctor.id,
+        "new_phc_id": target_phc.id,
+    }

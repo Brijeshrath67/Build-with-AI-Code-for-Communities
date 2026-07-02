@@ -9,7 +9,56 @@ STANDARD_MEDICINES = [
     "Ibuprofen 400mg",
     "Ciprofloxacin 500mg",
     "Cetirizine 10mg",
-    "Metformin 500mg"
+    "Metformin 500mg",
+    "Amlodipine 5mg",
+    "Atenolol 50mg",
+    "Losartan 50mg",
+    "Enalapril 5mg",
+    "Hydrochlorothiazide 25mg",
+    "Aspirin 75mg",
+    "Atorvastatin 10mg",
+    "Omeprazole 20mg",
+    "Pantoprazole 40mg",
+    "Ranitidine 150mg",
+    "Domperidone 10mg",
+    "Ondansetron 4mg",
+    "Albendazole 400mg",
+    "Azithromycin 500mg",
+    "Doxycycline 100mg",
+    "Cefixime 200mg",
+    "Co-trimoxazole 480mg",
+    "Fluconazole 150mg",
+    "Clotrimazole Cream",
+    "Mupirocin Ointment",
+    "Povidone Iodine Solution",
+    "Salbutamol Inhaler",
+    "Budesonide Inhaler",
+    "Montelukast 10mg",
+    "Prednisolone 5mg",
+    "Hydrocortisone Cream",
+    "Ferrous Sulphate Tablet",
+    "Folic Acid 5mg",
+    "Calcium Carbonate 500mg",
+    "Vitamin D3 60000 IU",
+    "Vitamin B Complex",
+    "Zinc Sulphate 20mg",
+    "Chloroquine 250mg",
+    "Artesunate 50mg",
+    "Primaquine 15mg",
+    "Insulin Regular",
+    "Glimepiride 2mg",
+    "Gliclazide 80mg",
+    "Levothyroxine 50mcg",
+    "Saline Nasal Drops",
+    "Chlorpheniramine 4mg",
+    "Dextromethorphan Syrup",
+    "Ambroxol Syrup",
+    "Loperamide 2mg",
+    "Lactulose Syrup",
+    "Bisacodyl 5mg",
+    "Diclofenac Gel",
+    "Tramadol 50mg",
+    "Magnesium Hydroxide Suspension",
 ]
 
 # Hardcoded alias-to-standard mapping for fast lookups
@@ -39,6 +88,15 @@ def resolve_medicine_name(query: str) -> dict:
     Uses direct lookup first, and falls back to TF-IDF Cosine Similarity.
     """
     query_clean = query.strip().lower()
+
+    for standard in STANDARD_MEDICINES:
+        if query_clean == standard.lower():
+            return {
+                "query": query,
+                "standard_name": standard,
+                "confidence": 1.0,
+                "method": "exact_standard_match"
+            }
     
     # 1. Direct alias lookup
     if query_clean in ALIAS_MAPPING:

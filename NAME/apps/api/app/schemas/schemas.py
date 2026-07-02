@@ -85,9 +85,14 @@ class TransferCreate(BaseModel):
     destination_phc_id: int
     medicine: str
     quantity: int
+    message: Optional[str] = None
+    requested_expiry_date: Optional[date] = None
 
 class TransferUpdate(BaseModel):
     status: str # 'approved', 'rejected', 'in_transit', 'completed'
+
+class DeclineTransferRequest(BaseModel):
+    reason: str = Field(..., min_length=1)
 
 class TransferResponse(BaseModel):
     id: int
@@ -98,6 +103,9 @@ class TransferResponse(BaseModel):
     medicine: str
     quantity: int
     status: str
+    message: Optional[str] = None
+    decline_reason: Optional[str] = None
+    requested_expiry_date: Optional[date] = None
     created_at: datetime
     approved_by: Optional[int] = None
     approved_at: Optional[datetime] = None

@@ -75,6 +75,9 @@ CREATE TABLE transfers (
     medicine VARCHAR(255) NOT NULL,
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     status VARCHAR(50) NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected', 'in_transit', 'completed'
+    message TEXT,
+    decline_reason TEXT,
+    requested_expiry_date DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     approved_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     approved_at TIMESTAMP WITH TIME ZONE

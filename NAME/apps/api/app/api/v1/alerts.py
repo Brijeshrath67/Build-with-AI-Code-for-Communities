@@ -133,6 +133,7 @@ def get_active_alerts(
         phc_obj = db.query(PHC).filter(PHC.id == stock.phc_id).first()
         if not phc_obj:
             continue
+        phc_name = phc_obj.name or "PHC"
 
         surplus = (
             db.query(Stock, PHC)

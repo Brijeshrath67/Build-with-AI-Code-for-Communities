@@ -1,8 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { login } from '../../services/api';
+
+const demoUsers = [
+  { id: 1, label: 'Dr. Ramesh - UPHC Unit-9', phone: '7777777777', role: 'PHC Staff' },
+  { id: 2, label: 'Dr. Suresh - UPHC Unit-3', phone: '6666666666', role: 'PHC Staff' },
+  { id: 13, label: 'Asha Devi', phone: '8888888888', role: 'ASHA Worker' },
+  { id: 12, label: 'District Officer Gupta', phone: '5555555555', role: 'District Health Official' },
+  { id: 11, label: 'System Admin', phone: '9999999999', role: 'System Admin' },
+];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,47 +19,27 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Demo credentials for quick login — one doctor per PHC (IDs 1-10)
-  const demoUsers = [
-<<<<<<< Updated upstream
-    { label: 'ASHA Worker', phone: '8888888888', role: 'ASHA Worker' },
-    { label: 'PHC Staff (Unit-9)', phone: '7777777777', role: 'PHC Staff' },
-    { label: 'District Officer', phone: '5555555555', role: 'District Health Official' },
-    { label: 'System Admin', phone: '9999999999', role: 'System Admin' },
-=======
-    { label: 'Dr. Ramesh — PHC #1 (UPHC Unit-9)',     phone: '7777777777', role: 'PHC Staff' },
-    { label: 'Dr. Suresh — PHC #2 (UPHC Unit-3)',     phone: '6666666666', role: 'PHC Staff' },
-    { label: 'Dr. Verma  — PHC #3 (CHC Nelamangala)', phone: '6666666661', role: 'PHC Staff' },
-    { label: 'Dr. Patel  — PHC #4 (PHC Devanahalli)', phone: '6666666662', role: 'PHC Staff' },
-    { label: 'Dr. Sharma — PHC #5 (PHC Yelahanka)',   phone: '6666666663', role: 'PHC Staff' },
-    { label: 'Dr. Kumar  — PHC #6 (UPHC Hebbal)',     phone: '6666666664', role: 'PHC Staff' },
-    { label: 'Dr. Singh  — PHC #7 (CHC Kengeri)',     phone: '6666666665', role: 'PHC Staff' },
-    { label: 'Dr. Mehta  — PHC #8 (PHC Whitefield)',  phone: '6666666668', role: 'PHC Staff' },
-    { label: 'Dr. Rao    — PHC #9 (UPHC Koramangala)',phone: '6666666669', role: 'PHC Staff' },
-    { label: 'Dr. Nair   — PHC #10 (PHC Jayanagar)',  phone: '6666666670', role: 'PHC Staff' },
-    { label: 'Asha Devi (ASHA Worker)',                phone: '8888888888', role: 'ASHA Worker' },
-    { label: 'District Officer Gupta',                 phone: '5555555555', role: 'District Health Official' },
-    { label: 'System Admin',                           phone: '9999999999', role: 'System Admin' },
->>>>>>> Stashed changes
-  ];
-
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('phc_token')) {
       router.push('/dashboard');
     }
-  }, []);
+  }, [router]);
+
+  const completeLogin = (accessToken: string, user: any) => {
+    localStorage.setItem('phc_token', accessToken);
+    localStorage.setItem('phc_user', JSON.stringify(user));
+    document.cookie = `phc_token=${accessToken}; path=/; max-age=86400; SameSite=Lax`;
+    router.push('/dashboard');
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
     try {
       const res = await login(phone, password);
-      const { access_token, user } = res.data;
-      localStorage.setItem('phc_token', access_token);
-      localStorage.setItem('phc_user', JSON.stringify(user));
-      document.cookie = `phc_token=${access_token}; path=/; max-age=86400; SameSite=Lax`;
-      router.push('/dashboard');
+      completeLogin(res.data.access_token, res.data.user);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Login failed. Please check your credentials.');
     } finally {
@@ -64,15 +52,12 @@ export default function LoginPage() {
     setPassword('password123');
     setLoading(true);
     setError('');
+
     try {
       const res = await login(demoPhone, 'password123');
-      const { access_token, user } = res.data;
-      localStorage.setItem('phc_token', access_token);
-      localStorage.setItem('phc_user', JSON.stringify(user));
-      document.cookie = `phc_token=${access_token}; path=/; max-age=86400; SameSite=Lax`;
-      router.push('/dashboard');
+      completeLogin(res.data.access_token, res.data.user);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Demo login failed. Is the backend running?');
+      setError(err.response?.data?.detail || 'Demo login failed. Is the backend running and seeded?');
     } finally {
       setLoading(false);
     }
@@ -80,14 +65,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex" style={{ background: 'linear-gradient(135deg, #030712 0%, #0a1628 50%, #030712 100%)' }}>
-      {/* Left panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-16 relative overflow-hidden">
-        {/* Animated glow circles */}
         <div className="absolute w-96 h-96 rounded-full opacity-10 animate-pulse" style={{ background: 'radial-gradient(circle, #10b981, transparent)', top: '10%', left: '5%' }} />
         <div className="absolute w-64 h-64 rounded-full opacity-5 animate-pulse" style={{ background: 'radial-gradient(circle, #3b82f6, transparent)', bottom: '20%', right: '10%', animationDelay: '1s' }} />
 
         <div className="relative z-10 text-center max-w-lg">
-          {/* Logo */}
           <div className="flex items-center justify-center mb-8">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center mr-4" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
               <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,34 +84,15 @@ export default function LoginPage() {
             Prevent stockouts and expiry waste by enabling AI-assisted lateral redistribution between nearby Primary Health Centres.
           </p>
 
-<<<<<<< Updated upstream
-          {/* Feature pills */}
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              '🤖 AI Demand Forecasting',
-              '🗺️ Geospatial Matching',
-              '📦 Real-time Inventory',
-              '🔄 Lateral Redistribution',
-              '💬 NL Query Assistant',
-              '📶 Offline-first Sync',
-            ].map((feature) => (
-              <div key={feature} className="text-left text-sm px-3 py-2 rounded-lg text-gray-300" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
-                {feature}
-              </div>
-            ))}
-=======
-          {/* Features Highlights */}
           <div className="rounded-xl p-6 text-left" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-              <span className="text-emerald-400">🛡️</span> Secured Health Portal
-            </h3>
+            <h3 className="text-white font-semibold mb-4">Secured Health Portal</h3>
             <div className="space-y-3">
               {[
-                { title: "Lateral Medicine Redistribution", desc: "Instantly coordinate transfers with nearest health centers." },
-                { title: "AI Stockout Forecasting", desc: "Machine learning predictions for stock depletion days ahead." },
-                { title: "Real-time Auditable Ledger", desc: "Transparent, tracked dispatch and receipt notifications." }
-              ].map((feat, idx) => (
-                <div key={idx} className="flex gap-3">
+                { title: 'Lateral Medicine Redistribution', desc: 'Instantly coordinate transfers with nearby health centers.' },
+                { title: 'AI Stockout Forecasting', desc: 'Predictions for stock depletion days ahead.' },
+                { title: 'Real-time Auditable Ledger', desc: 'Transparent dispatch and receipt notifications.' },
+              ].map((feat) => (
+                <div key={feat.title} className="flex gap-3">
                   <span className="text-emerald-500 mt-1">✓</span>
                   <div>
                     <h4 className="text-sm font-semibold text-white">{feat.title}</h4>
@@ -138,15 +101,12 @@ export default function LoginPage() {
                 </div>
               ))}
             </div>
->>>>>>> Stashed changes
           </div>
         </div>
       </div>
 
-      {/* Right panel - Login form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8">
         <div className="w-full max-w-md">
-          {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center mb-8">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-3" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
               <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,7 +166,6 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Demo Quick Access */}
             <div className="mt-8">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
@@ -223,12 +182,19 @@ export default function LoginPage() {
                     className="text-left px-3 py-2.5 rounded-lg text-xs transition-all"
                     style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.12)', color: '#6ee7b7' }}
                   >
-                    <div className="font-medium">{u.label}</div>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-medium">{u.label}</span>
+                      <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-emerald-200" style={{ background: 'rgba(16,185,129,0.14)' }}>
+                        ID {u.id}
+                      </span>
+                    </div>
                     <div className="text-gray-500 mt-0.5">{u.role}</div>
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-gray-600 mt-3 text-center">All demo accounts use password: <span className="text-gray-400">password123</span></p>
+              <p className="text-xs text-gray-600 mt-3 text-center">
+                All demo accounts use password: <span className="text-gray-400">password123</span>
+              </p>
             </div>
           </div>
         </div>

@@ -103,15 +103,12 @@ export const getDistrictDashboard = (district: string) =>
 export const getAllPHCs = () =>
   api.get('/api/v1/dashboard/district/all');
 
-<<<<<<< Updated upstream
-=======
 export const getNetworkStatus = () =>
   api.get('/api/v1/dashboard/network');
 
 export const reassignDoctor = (doctorId: number, newPhcId: number) =>
   api.post('/api/v1/dashboard/reassign-doctor', { doctor_id: doctorId, new_phc_id: newPhcId });
 
->>>>>>> Stashed changes
 // ============ NL QUERY ============
 export const sendNLQuery = (query: string, phcId?: number) =>
   api.post('/api/v1/query', { query, phc_id: phcId });

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../../components/common/Sidebar';
 import { getTransferLedger, createTransfer, approveTransfer, declineTransfer, withdrawTransfer, getMatches } from '../../services/api';
+import { MEDICINES } from '../../constants/medicines';
 
 
 interface Transfer {
@@ -34,8 +35,6 @@ const statusMeta: Record<string, { color: string; bg: string; icon: string }> = 
   rejected: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)', icon: '❌' },
   in_transit: { color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', icon: '🚚' },
 };
-
-const MEDICINES = ['Paracetamol 500mg', 'Amoxicillin 500mg', 'Ibuprofen 400mg', 'Cetirizine 10mg', 'Metformin 500mg'];
 
 export default function TransfersPage() {
   const router = useRouter();

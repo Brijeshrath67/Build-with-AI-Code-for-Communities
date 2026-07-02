@@ -42,8 +42,6 @@ const navItems: NavItem[] = [
     ),
   },
   {
-<<<<<<< Updated upstream
-=======
     href: '/redistribution',
     label: 'Redistribution',
     icon: (
@@ -63,7 +61,6 @@ const navItems: NavItem[] = [
     ),
   },
   {
->>>>>>> Stashed changes
     href: '/analytics',
     label: 'District Map',
     icon: (
@@ -164,7 +161,7 @@ export default function Sidebar() {
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
           style={{ background: isOnline ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${isOnline ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
           <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: isOnline ? '#10b981' : '#ef4444' }} />
-          <span style={{ color: isOnline ? '#34d399' : '#f87171' }}>{isOnline ? 'Connected' : 'Offline — updates queued'}</span>
+          <span style={{ color: isOnline ? '#34d399' : '#f87171' }}>{isOnline ? 'Connected' : 'Offline - updates queued'}</span>
         </div>
       </div>
 

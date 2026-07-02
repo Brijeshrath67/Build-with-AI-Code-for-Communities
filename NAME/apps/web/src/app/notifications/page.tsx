@@ -95,9 +95,9 @@ export default function NotificationsPage() {
   };
 
   const severityMeta: Record<string, any> = {
-    high: { color: '#ef4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.15)', icon: '🚨', label: 'Critical' },
-    medium: { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.15)', icon: '⚠️', label: 'Warning' },
-    low: { color: '#3b82f6', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.15)', icon: 'ℹ️', label: 'Info' },
+    high: { color: '#ef4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.15)', icon: '!', label: 'Critical' },
+    medium: { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.15)', icon: '!', label: 'Warning' },
+    low: { color: '#3b82f6', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.15)', icon: 'i', label: 'Info' },
   };
 
   const currentAlerts = activeTab === 'unread' ? alerts : historyAlerts;
@@ -152,7 +152,7 @@ export default function NotificationsPage() {
             <div className="text-center py-16 text-gray-500 text-sm">Loading notifications...</div>
           ) : filteredAlerts.length === 0 ? (
             <div className="text-center py-16">
-              <div className="text-5xl mb-4">✅</div>
+              <div className="text-5xl mb-4 text-emerald-400">OK</div>
               <p className="text-gray-400 font-medium">No notifications found</p>
               <p className="text-gray-600 text-sm mt-1">No inbox items match the selected filter</p>
             </div>
@@ -193,7 +193,7 @@ export default function NotificationsPage() {
                         onClick={() => handleMarkAsRead(a.id)}
                         className="text-xs font-semibold px-3 py-1.5 rounded-lg border flex-shrink-0 hover:bg-gray-800 transition-all text-gray-300 border-gray-700"
                       >
-                        ✓ Mark as Read
+                        Mark as Read
                       </button>
                     )}
                   </div>

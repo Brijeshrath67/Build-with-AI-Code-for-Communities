@@ -21,6 +21,12 @@ const FALLBACK_PHCS: PHC[] = [
   { id: 2, name: 'UPHC Unit-3', district: 'Bangalore Urban', latitude: 12.9815987, longitude: 77.6045627, type: 'UPHC', stockStatus: 'ok' },
   { id: 3, name: 'CHC Nelamangala', district: 'Bangalore Rural', latitude: 13.0987, longitude: 77.3912, type: 'CHC', stockStatus: 'low' },
   { id: 4, name: 'PHC Devanahalli', district: 'Bangalore Rural', latitude: 13.2486, longitude: 77.7123, type: 'PHC', stockStatus: 'low' },
+  { id: 5, name: 'UPHC Malleswaram', district: 'Bangalore Urban', latitude: 13.0031, longitude: 77.5643, type: 'UPHC', stockStatus: 'critical' },
+  { id: 6, name: 'UPHC Jayanagar', district: 'Bangalore Urban', latitude: 12.9250, longitude: 77.5938, type: 'UPHC', stockStatus: 'low' },
+  { id: 7, name: 'PHC Yelahanka', district: 'Bangalore Urban', latitude: 13.1007, longitude: 77.5963, type: 'PHC', stockStatus: 'critical' },
+  { id: 8, name: 'CHC Hoskote', district: 'Bangalore Rural', latitude: 13.0707, longitude: 77.7981, type: 'CHC', stockStatus: 'low' },
+  { id: 9, name: 'PHC Anekal', district: 'Bangalore Urban', latitude: 12.7111, longitude: 77.6956, type: 'PHC', stockStatus: 'ok' },
+  { id: 10, name: 'PHC Magadi', district: 'Bangalore Rural', latitude: 12.9572, longitude: 77.2236, type: 'PHC', stockStatus: 'low' },
 ];
 
 const statusColors: Record<string, string> = {
@@ -35,10 +41,30 @@ export default function PHCMap() {
 
   useEffect(() => {
     // Try fetching live PHC data
-    api.get('/api/v1/dashboard/district/all')
+    api.get('/api/v1/dashboard/network')
       .then(res => {
-        // The dashboard doesn't directly return PHC list, so we use fallback augmented by stock summaries
-        setPHCs(FALLBACK_PHCS);
+        const livePhcs = res.data?.phcs || [];
+        if (!livePhcs.length) {
+          setPHCs(FALLBACK_PHCS);
+          return;
+        }
+
+        setPHCs(livePhcs.map((phc: any) => {
+          const quantities = (phc.stocks || []).map((stock: any) => stock.quantity);
+          const hasOutOfStock = quantities.some((qty: number) => qty === 0);
+          const hasCritical = quantities.some((qty: number) => qty > 0 && qty <= 20);
+          const hasLow = quantities.some((qty: number) => qty > 20 && qty <= 50);
+
+          return {
+            id: phc.id,
+            name: phc.name,
+            district: phc.district,
+            latitude: phc.latitude,
+            longitude: phc.longitude,
+            type: phc.type,
+            stockStatus: hasOutOfStock || hasCritical ? 'critical' : hasLow ? 'low' : 'ok',
+          };
+        }));
       })
       .catch(() => {
         setPHCs(FALLBACK_PHCS);
