@@ -106,7 +106,7 @@ export default function AIPage() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-white">AI Inventory Assistant</h1>
-              <p className="text-xs text-gray-400">Grounded in live PHC network data · Powered by Gemini</p>
+              <p className="text-xs text-gray-400">Grounded in live PHC network data · Local AI</p>
             </div>
             <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
               style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#34d399' }}>

@@ -4,6 +4,7 @@ from sqlalchemy import text, func
 from typing import List, Optional
 import requests
 import math
+from datetime import datetime, timezone, date
 from apps.api.app.core.database import get_db
 from apps.api.app.core.config import settings
 from apps.api.app.core.dependencies import get_current_active_user
@@ -20,15 +21,12 @@ def match_redistribution_candidates(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    # Verify the requestor's PHC exists
     target_phc = db.query(PHC).filter(PHC.id == phc_id).first()
     if not target_phc:
         raise HTTPException(status_code=404, detail="Target PHC not found")
-        
-    # Step 1: Resolve the medicine name semantically (AI or SQL Alias mapping fallback)
+
     resolved_medicine = medicine
     try:
-        # Try contacting AI service for semantic vector matching
         response = requests.get(
             f"{settings.AI_SERVICE_URL}/api/v1/ai/matcher/resolve",
             params={"query": medicine},
@@ -37,15 +35,12 @@ def match_redistribution_candidates(
         if response.status_code == 200:
             resolved_medicine = response.json().get("standard_name", medicine)
     except Exception:
-        # Local SQL mapping fallback
         mapping = db.query(MedicineMapping).filter(
             func.lower(MedicineMapping.alias_name) == func.lower(medicine)
         ).first()
         if mapping:
             resolved_medicine = mapping.standard_name
 
-    # Step 2: Query other PHCs with stock of the resolved medicine, calculating distance via Haversine Formula
-    # Haversine formula in SQL: 6371 * acos(cos(radians(lat_origin)) * cos(radians(lat_dest)) * cos(radians(lon_dest) - radians(lon_origin)) + sin(radians(lat_origin)) * sin(radians(lat_dest)))
     query_sql = text("""
         SELECT p.id as phc_id, p.name as phc_name, s.quantity as available_surplus, s.expiry_date,
                (6371 * acos(
@@ -62,7 +57,7 @@ def match_redistribution_candidates(
           AND s.quantity > 0
         ORDER BY distance_km ASC
     """)
-    
+
     results = db.execute(query_sql, {
         "origin_id": phc_id,
         "origin_lat": target_phc.latitude,
@@ -70,21 +65,52 @@ def match_redistribution_candidates(
         "medicine": resolved_medicine
     }).mappings().all()
 
+    today = date.today()
+    max_dist = 0.0
+    max_surplus = 0
+    for r in results:
+        d = r["distance_km"]
+        if not math.isnan(d) and d > max_dist:
+            max_dist = d
+        if r["available_surplus"] > max_surplus:
+            max_surplus = r["available_surplus"]
+
     recommendations = []
     for row in results:
-        # Distance calculation check to handle exact same points (0 km distance acos range error)
         dist = row["distance_km"]
         if math.isnan(dist):
             dist = 0.0
-            
+        if max_dist == 0:
+            max_dist = 1.0
+
+        days_to_expiry = (row["expiry_date"] - today).days
+        if days_to_expiry <= 0:
+            urgency_score = 1.0
+        elif days_to_expiry >= 365:
+            urgency_score = 0.0
+        else:
+            urgency_score = 1.0 - (days_to_expiry / 365.0)
+
+        surplus_norm = row["available_surplus"] / max_surplus if max_surplus > 0 else 0
+        dist_norm = 1.0 - (dist / max_dist)
+
+        composite_score = round(
+            dist_norm * 0.4 +
+            urgency_score * 0.35 +
+            surplus_norm * 0.25,
+            3
+        )
+
         recommendations.append(MatchItem(
             phc_id=row["phc_id"],
             phc_name=row["phc_name"],
             distance_km=round(dist, 2),
             available_surplus=row["available_surplus"],
             expiry_date=row["expiry_date"],
-            similarity_score=1.0 # Exact matches on alias or resolved name
+            similarity_score=composite_score
         ))
+
+    recommendations.sort(key=lambda r: r.similarity_score, reverse=True)
 
     return MatchResponse(
         medicine=resolved_medicine,

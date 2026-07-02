@@ -79,6 +79,9 @@ export const getDistrictDashboard = (district: string) =>
 export const getAllPHCs = () =>
   api.get('/api/v1/dashboard/district/all');
 
+export const getNetworkStatus = () =>
+  api.get('/api/v1/dashboard/network');
+
 // ============ NL QUERY ============
 export const sendNLQuery = (query: string, phcId?: number) =>
   api.post('/api/v1/query', { query, phc_id: phcId });

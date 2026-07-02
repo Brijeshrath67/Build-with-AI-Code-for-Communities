@@ -171,6 +171,45 @@ export default function InventoryPage() {
                 📶 {queueLength} updates queued {isSyncing ? '(syncing...)' : '(offline)'}
               </div>
             )}
+            <button
+              onClick={() => {
+                const header = 'Medicine,Quantity,Expiry Date\n';
+                const rows = stocks.map(s => `${s.medicine},${s.quantity},${s.expiry_date}`).join('\n');
+                const blob = new Blob([header + rows], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'phc_inventory.csv'; a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa' }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
+              Export CSV
+            </button>
+            <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer"
+              style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#a78bfa' }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 3v12" />
+              </svg>
+              Import CSV
+              <input type="file" accept=".csv" className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0]; if (!file) return;
+                const text = await file.text();
+                const lines = text.split('\n').filter(l => l.trim());
+                const items = lines.slice(1).map(l => {
+                  const [medicine, qty, exp] = l.split(',').map(s => s.trim());
+                  return { medicine, quantity: parseInt(qty), expiry_date: exp };
+                }).filter(it => it.medicine && !isNaN(it.quantity) && it.expiry_date);
+                if (items.length === 0) { flash('err', 'No valid stock entries found in CSV.'); return; }
+                for (const item of items) {
+                  try { await updateStock(item); } catch { /* skip duplicates */ }
+                }
+                flash('ok', `Imported ${items.length} stock entries from CSV.`);
+                fetchStock();
+                e.target.value = '';
+              }} />
+            </label>
             {user?.role !== 'District Health Official' && (
               <button id="add-stock-btn" onClick={() => setFormOpen(true)}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white"

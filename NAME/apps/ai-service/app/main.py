@@ -1,3 +1,10 @@
+import os
+import json
+import threading
+from dotenv import load_dotenv
+load_dotenv()
+
+import redis
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -13,6 +20,52 @@ app = FastAPI(
     title="PHC Exchange AI Service",
     description="Microservice for demand forecasting, semantic matching, and NLP parsing"
 )
+
+# ── Event Bus Background Consumer ──────────────────────────────────────
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+_r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+STREAM_KEY = "phc:events"
+GROUP = "phc:services"
+
+
+def _ensure_group():
+    try:
+        _r.xgroup_create(STREAM_KEY, GROUP, id="0", mkstream=True)
+    except redis.ResponseError:
+        pass
+
+
+def _handle_event(event_type: str, data: dict):
+    print(f"[EventBus] Received {event_type}: {json.dumps(data)[:100]}")
+    if event_type == "stock.updated":
+        phc_id = data.get("phc_id")
+        if phc_id:
+            print(f"[EventBus] Stock updated for PHC #{phc_id} — triggering forecast refresh...")
+
+
+def _consumer_loop():
+    _ensure_group()
+    while True:
+        try:
+            results = _r.xreadgroup(GROUP, "ai-worker", {STREAM_KEY: ">"}, count=5, block=2000)
+            if not results:
+                continue
+            for _, messages in results:
+                for msg_id, fields in messages:
+                    try:
+                        _handle_event(fields.get("type", ""), json.loads(fields.get("data", "{}")))
+                        _r.xack(STREAM_KEY, GROUP, msg_id)
+                    except Exception as e:
+                        print(f"[EventBus] Error processing {msg_id}: {e}")
+        except Exception as e:
+            print(f"[EventBus] Poll error: {e}")
+
+
+@app.on_event("startup")
+def start_event_consumer():
+    t = threading.Thread(target=_consumer_loop, daemon=True)
+    t.start()
+    print("[EventBus] Consumer thread started")
 
 # CORS setup
 app.add_middleware(

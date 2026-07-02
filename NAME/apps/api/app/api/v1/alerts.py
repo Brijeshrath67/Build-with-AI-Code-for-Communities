@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import math
 from apps.api.app.core.database import get_db
 from apps.api.app.core.dependencies import get_current_active_user
 from apps.api.app.models.models import Alert, Stock, PHC, User
@@ -81,7 +82,42 @@ def get_active_alerts(
                     created_at=datetime.now(timezone.utc)
                 ))
                 alert_id_counter += 1
-                
+
+        # 3. Transfer recommendation alerts — find nearby surplus for low-stock PHCs
+        low_stock_items = [s for s in stocks if s.quantity <= 50 and s.expiry_date > now_date]
+        if low_stock_items:
+            for s in low_stock_items[:5]:
+                phc_obj = db.query(PHC).filter(PHC.id == s.phc_id).first()
+                if not phc_obj:
+                    continue
+                surplus = db.query(Stock, PHC).join(PHC, Stock.phc_id == PHC.id).filter(
+                    Stock.medicine == s.medicine,
+                    Stock.phc_id != s.phc_id,
+                    Stock.quantity >= 50,
+                    Stock.expiry_date > now_date
+                ).order_by(Stock.quantity.desc()).first()
+                if surplus:
+                    src_stock, src_phc = surplus
+                    try:
+                        dist = 6371 * math.acos(
+                            min(1.0, max(-1.0,
+                                math.cos(math.radians(phc_obj.latitude)) * math.cos(math.radians(src_phc.latitude)) *
+                                math.cos(math.radians(src_phc.longitude) - math.radians(phc_obj.longitude)) +
+                                math.sin(math.radians(phc_obj.latitude)) * math.sin(math.radians(src_phc.latitude))
+                            ))
+                        )
+                    except (ValueError, OverflowError):
+                        dist = 999.0
+                    dynamic_alerts.append(Alert(
+                        id=alert_id_counter,
+                        phc_id=s.phc_id,
+                        message=f"TRANSFER RECOMMENDED: {phc_name} needs {s.medicine} (only {s.quantity} left). "
+                                f"{src_phc.name} has {src_stock.quantity} surplus units ({dist:.1f}km away).",
+                        severity="medium",
+                        created_at=datetime.now(timezone.utc)
+                    ))
+                    alert_id_counter += 1
+
         return dynamic_alerts + alerts
         
     return alerts

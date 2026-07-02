@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { login } from '../../services/api';
+import { login, getNetworkStatus } from '../../services/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,12 +10,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [network, setNetwork] = useState<any[]>([]);
 
   // Demo credentials for quick login
   const demoUsers = [
-    { label: 'ASHA Worker', phone: '8888888888', role: 'ASHA Worker' },
-    { label: 'PHC Staff (Unit-9)', phone: '7777777777', role: 'PHC Staff' },
-    { label: 'District Officer', phone: '5555555555', role: 'District Health Official' },
+    { label: 'Dr. Ramesh — PHC #1 (Unit-9)', phone: '7777777777', role: 'PHC Staff' },
+    { label: 'Dr. Suresh — PHC #2 (Unit-3)', phone: '6666666666', role: 'PHC Staff' },
+    { label: 'Dr. Verma — PHC #3 (Nelamangala)', phone: '6666666661', role: 'PHC Staff' },
+    { label: 'Dr. Patel — PHC #4 (Devanahalli)', phone: '6666666662', role: 'PHC Staff' },
+    { label: 'Asha Devi (ASHA Worker)', phone: '8888888888', role: 'ASHA Worker' },
+    { label: 'District Officer Gupta', phone: '5555555555', role: 'District Health Official' },
     { label: 'System Admin', phone: '9999999999', role: 'System Admin' },
   ];
 
@@ -23,6 +27,10 @@ export default function LoginPage() {
     if (typeof window !== 'undefined' && localStorage.getItem('phc_token')) {
       router.push('/dashboard');
     }
+  }, []);
+
+  useEffect(() => {
+    getNetworkStatus().then(r => setNetwork(r.data?.phcs || [])).catch(() => {});
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -86,20 +94,55 @@ export default function LoginPage() {
             Prevent stockouts and expiry waste by enabling AI-assisted lateral redistribution between nearby Primary Health Centres.
           </p>
 
-          {/* Feature pills */}
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              '🤖 AI Demand Forecasting',
-              '🗺️ Geospatial Matching',
-              '📦 Real-time Inventory',
-              '🔄 Lateral Redistribution',
-              '💬 NL Query Assistant',
-              '📶 Offline-first Sync',
-            ].map((feature) => (
-              <div key={feature} className="text-left text-sm px-3 py-2 rounded-lg text-gray-300" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
-                {feature}
-              </div>
-            ))}
+          {/* PHC Network Controller */}
+          <div className="rounded-xl p-4" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">PHC Network Controller</span>
+              {network.length === 0 && <span className="w-3 h-3 rounded-full border border-gray-600 border-t-transparent animate-spin" />}
+            </div>
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {network.map((phc: any) => {
+                const lowItems = phc.stocks.filter((s: any) => s.quantity <= 20).length;
+                const surplusItems = phc.stocks.filter((s: any) => s.quantity >= 300).length;
+                return (
+                  <div key={phc.id} className="rounded-lg p-3" style={{ background: 'rgba(17,24,39,0.6)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div>
+                        <span className="text-sm font-medium text-white">{phc.name}</span>
+                        <span className="text-xs text-gray-600 ml-2">#{phc.id} · {phc.type}</span>
+                      </div>
+                      <button
+                        onClick={() => handleDemoLogin(
+                          ['7777777777','6666666666','6666666661','6666666662'][phc.id - 1]
+                        )}
+                        disabled={loading}
+                        className="text-[10px] px-2 py-1 rounded font-medium transition-all"
+                        style={{ background: 'rgba(16,185,129,0.1)', color: '#34d399', border: '1px solid rgba(16,185,129,0.2)' }}
+                      >
+                        Login
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {phc.stocks.map((s: any) => (
+                        <span key={s.medicine} className="text-[10px] px-1.5 py-0.5 rounded"
+                          style={{
+                            background: s.quantity <= 20 ? 'rgba(239,68,68,0.15)' : s.quantity >= 300 ? 'rgba(16,185,129,0.1)' : 'rgba(75,85,99,0.2)',
+                            color: s.quantity <= 20 ? '#f87171' : s.quantity >= 300 ? '#34d399' : '#9ca3af'
+                          }}>
+                          {s.medicine.replace(' 500mg', '').replace(' 10mg', '')} {s.quantity}
+                        </span>
+                      ))}
+                    </div>
+                    {(lowItems > 0 || surplusItems > 0) && (
+                      <div className="flex gap-2 mt-1.5">
+                        {lowItems > 0 && <span className="text-[10px]" style={{ color: '#f87171' }}>⚠ {lowItems} low</span>}
+                        {surplusItems > 0 && <span className="text-[10px]" style={{ color: '#34d399' }}>📦 {surplusItems} surplus</span>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

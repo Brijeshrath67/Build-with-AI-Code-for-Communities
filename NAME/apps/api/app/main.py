@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apps.api.app.core.config import settings
+from apps.api.app.core.ratelimit import RateLimitMiddleware
 from apps.api.app.api.v1 import auth, stock, transfer, forecast, match, alerts, dashboard, query, whatsapp
 
 app = FastAPI(
@@ -16,6 +17,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting (Redis-backed)
+app.add_middleware(RateLimitMiddleware)
 
 # Register routers
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
