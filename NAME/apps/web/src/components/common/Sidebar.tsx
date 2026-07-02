@@ -95,6 +95,9 @@ export default function Sidebar() {
   }, []);
 
   const handleLogout = () => {
+    if (user?.id) {
+      localStorage.removeItem(`phc_ai_conversation_${user.id}`);
+    }
     localStorage.removeItem('phc_token');
     localStorage.removeItem('phc_user');
     document.cookie = 'phc_token=; path=/; max-age=0; SameSite=Lax';

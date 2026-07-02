@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import string
 from datetime import datetime, timezone, timedelta
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -50,6 +51,10 @@ def parse_whatsapp_message(text: str) -> dict:
         medicine = "Ibuprofen 400mg"
     elif "cetirizine" in body_lower or "okacet" in body_lower:
         medicine = "Cetirizine 10mg"
+    elif "metformin" in body_lower or "glycomet" in body_lower:
+        medicine = "Metformin 500mg"
+    elif "ciprofloxacin" in body_lower or "cipro" in body_lower:
+        medicine = "Ciprofloxacin 500mg"
     date_match = re.search(r"\b(\d{4}-\d{2}-\d{2})\b", text)
     if date_match:
         expiry_date = date_match.group(1)
@@ -68,13 +73,14 @@ def answer_grounded_query(query: str, context: str) -> str:
         except Exception:
             pass
 
-    query_lower = query.lower()
-    if "hello" in query_lower or "hi" in query_lower:
+    query_lower = query.lower().strip(string.punctuation)
+    words = set(query_lower.split())
+    if "hello" in words or words & {"hi", "hey", "greetings"}:
         return "Hello! I am your PHC Exchange Assistant. I help track local inventory and recommend lateral transfers. How can I assist you today?"
     matching_info = []
     lines = context.split("\n")
     for line in lines:
-        keywords = [w for w in query_lower.split() if len(w) > 3]
+        keywords = [w.strip(string.punctuation) for w in query_lower.split() if len(w.strip(string.punctuation)) > 3]
         if any(kw in line.lower() for kw in keywords):
             matching_info.append(line)
     if matching_info:

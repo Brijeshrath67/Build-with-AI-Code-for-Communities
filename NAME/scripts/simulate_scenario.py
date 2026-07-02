@@ -119,10 +119,13 @@ def run_simulation():
     print(f"  PHC UPHC Unit-9 (Recipient): {dest_stock['quantity']} units (Previous: {pcm_stock['quantity']})")
     print(f"  PHC UPHC Unit-3 (Supplier):  {source_stock['quantity']} units (Previous: 800)")
     
-    if dest_stock['quantity'] == 220 and source_stock['quantity'] == 600:
+    if dest_stock['quantity'] == pcm_stock['quantity'] + 200 and source_stock['quantity'] == 800 - 200:
         print("\n=== SUCCESS: End-to-end lateral redistribution scenario completed. Stockout prevented successfully! ===")
     else:
-        print("\n[WARNING] Inventory mismatch. Check database values.")
+        print("\n[WARNING] Inventory mismatch. Expected dest={}, source={} but got dest={}, source={}".format(
+            pcm_stock['quantity'] + 200, 800 - 200,
+            dest_stock['quantity'], source_stock['quantity']
+        ))
 
 if __name__ == "__main__":
     run_simulation()

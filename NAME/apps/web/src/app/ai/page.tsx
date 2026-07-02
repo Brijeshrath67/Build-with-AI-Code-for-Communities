@@ -12,6 +12,27 @@ interface Message {
   timestamp: Date;
 }
 
+function storageKey(userId: number | undefined) {
+  return `phc_ai_conversation_${userId ?? 'anon'}`;
+}
+
+function loadSavedMessages(userId: number | undefined): Message[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(storageKey(userId));
+    if (!raw) return [];
+    return JSON.parse(raw).map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+  } catch { /* ignore corrupt data */ }
+  return [];
+}
+
+function saveMessages(messages: Message[], userId: number | undefined) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(storageKey(userId), JSON.stringify(messages));
+  } catch { /* quota exceeded, ignore */ }
+}
+
 const SUGGESTION_PROMPTS = [
   "Do we have any Paracetamol left?",
   "Which PHCs have surplus Amoxicillin?",
@@ -37,8 +58,11 @@ export default function AIPage() {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      // Welcome message
+    if (!user) return;
+    const saved = loadSavedMessages(user.id);
+    if (saved.length > 0) {
+      setMessages(saved);
+    } else {
       setMessages([{
         id: 'welcome',
         role: 'assistant',
@@ -50,6 +74,9 @@ export default function AIPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0) {
+      saveMessages(messages, user?.id);
+    }
   }, [messages]);
 
   const sendMessage = async (text: string) => {

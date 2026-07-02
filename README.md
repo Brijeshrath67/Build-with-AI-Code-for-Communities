@@ -210,53 +210,95 @@ Medicine Stock Updated
 
 ---
 
-# 🛠️ Proposed Tech Stack
+# 🛠️ Tech Stack
 
 ## Frontend
-
-* React.js
-* Tailwind CSS
-* Leaflet / Google Maps API
+* Next.js 14, React, TypeScript, Tailwind CSS, Leaflet
 
 ## Backend
-
-* FastAPI
-* Python
-
-## Database
-
-* PostgreSQL
-* Redis (Caching)
+* FastAPI, Python 3.13, SQLAlchemy, PostgreSQL, Redis
 
 ## AI/ML
+* Scikit-learn, NumPy, Pandas, Groq API, Google Generative AI
 
-* Scikit-learn
-* TensorFlow
-* Pandas
-* NumPy
+## DevOps
+* Docker, Docker Compose
 
-## Cloud & DevOps
+---
 
-* Docker
-* GitHub Actions
-* AWS / Azure
+# 🚀 Quick Start
+
+## Prerequisites
+- Python 3.13+
+- Node.js 20+
+- PostgreSQL 16
+- Redis 7
+- Docker (optional)
+
+## Run with Docker (recommended)
+
+```bash
+cd NAME
+docker compose -f infrastructure/docker/docker-compose.yml up --build
+```
+
+## Run locally
+
+```bash
+# 1. Start PostgreSQL and Redis
+docker compose -f infrastructure/docker/docker-compose.yml up db redis
+
+# 2. Install Python dependencies
+uv sync
+
+# 3. Start API service (terminal 1)
+uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# 4. Start AI service (terminal 2)
+cd apps/ai-service
+PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+
+# 5. Start Web frontend (terminal 3)
+cd apps/web && npm install && npm run dev
+```
+
+Visit **http://localhost:3000** and login with any demo account (password: `password123`).
+
+## Demo Accounts
+
+| Name | Phone | Role |
+|------|-------|------|
+| Dr. Ramesh | 7777777777 | PHC Staff (Unit-9) |
+| Dr. Suresh | 6666666666 | PHC Staff (Unit-3) |
+| Dr. Verma | 6666666661 | PHC Staff (Nelamangala) |
+| Dr. Patel | 6666666662 | PHC Staff (Devanahalli) |
+| Asha Devi | 8888888888 | ASHA Worker |
+| District Officer Gupta | 5555555555 | District Health Official |
+| System Admin | 9999999999 | System Admin |
 
 ---
 
 # 📂 Project Structure
 
 ```bash
-PHC-Exchange/
-│
-├── frontend/
-├── backend/
-├── ai-engine/
+NAME/
+├── apps/
+│   ├── api/            # FastAPI backend (port 8000)
+│   ├── ai-service/     # AI microservice (port 8001)
+│   ├── event-bus/      # Redis stream pub/sub library
+│   └── web/            # Next.js frontend (port 3000)
 ├── database/
-├── docs/
-├── deployment/
-├── scripts/
-├── tests/
-├── assets/
+│   ├── schema.sql      # Database schema
+│   └── seed/seed.sql   # Seed data
+├── infrastructure/docker/
+│   ├── docker-compose.yml
+│   ├── backend.Dockerfile
+│   ├── ai.Dockerfile
+│   └── frontend.Dockerfile
+├── docs/               # Documentation
+├── scripts/            # Utility scripts
+├── .env.example        # Environment variables template
+├── pyproject.toml      # Python dependencies
 └── README.md
 ```
 

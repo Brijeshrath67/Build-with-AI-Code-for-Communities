@@ -1,3 +1,5 @@
+from urllib.parse import unquote
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List
@@ -42,7 +44,7 @@ def get_district_dashboard_data(
     current_user: User = Depends(get_current_active_user)
 ):
     # Resolve district name formatting (e.g. replace %20 with space)
-    district_decoded = district_name.replace("%20", " ")
+    district_decoded = unquote(district_name)
     
     # If "all" is requested, aggregate district statistics across all areas
     if district_decoded.lower() == "all":

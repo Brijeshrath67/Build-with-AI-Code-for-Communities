@@ -40,6 +40,7 @@ export default function LoginPage() {
     try {
       const res = await login(phone, password);
       const { access_token, user } = res.data;
+      if (user?.id) localStorage.removeItem(`phc_ai_conversation_${user.id}`);
       localStorage.setItem('phc_token', access_token);
       localStorage.setItem('phc_user', JSON.stringify(user));
       document.cookie = `phc_token=${access_token}; path=/; max-age=86400; SameSite=Lax`;
@@ -59,6 +60,7 @@ export default function LoginPage() {
     try {
       const res = await login(demoPhone, 'password123');
       const { access_token, user } = res.data;
+      if (user?.id) localStorage.removeItem(`phc_ai_conversation_${user.id}`);
       localStorage.setItem('phc_token', access_token);
       localStorage.setItem('phc_user', JSON.stringify(user));
       document.cookie = `phc_token=${access_token}; path=/; max-age=86400; SameSite=Lax`;
@@ -123,8 +125,8 @@ export default function LoginPage() {
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {phc.stocks.map((s: any) => (
-                        <span key={s.medicine} className="text-[10px] px-1.5 py-0.5 rounded"
+                      {phc.stocks.map((s: any, i: number) => (
+                        <span key={`${s.medicine}-${s.expiry_date}-${i}`} className="text-[10px] px-1.5 py-0.5 rounded"
                           style={{
                             background: s.quantity <= 20 ? 'rgba(239,68,68,0.15)' : s.quantity >= 300 ? 'rgba(16,185,129,0.1)' : 'rgba(75,85,99,0.2)',
                             color: s.quantity <= 20 ? '#f87171' : s.quantity >= 300 ? '#34d399' : '#9ca3af'

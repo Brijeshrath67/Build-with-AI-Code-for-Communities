@@ -20,7 +20,9 @@ INSERT INTO users (id, name, role, phone, password_hash, phc_id, status) VALUES
 (2, 'Asha Devi', 'ASHA Worker', '8888888888', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', 1, 'active'),
 (3, 'Dr. Ramesh', 'PHC Staff', '7777777777', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', 1, 'active'),
 (4, 'Dr. Suresh', 'PHC Staff', '6666666666', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', 2, 'active'),
-(5, 'District Officer Gupta', 'District Health Official', '5555555555', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', NULL, 'active');
+(5, 'District Officer Gupta', 'District Health Official', '5555555555', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', NULL, 'active'),
+(6, 'Dr. Verma', 'PHC Staff', '6666666661', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', 3, 'active'),
+(7, 'Dr. Patel', 'PHC Staff', '6666666662', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', 4, 'active');
 
 -- 3. Insert Starting Stocks
 -- UPHC Unit-9 has low Paracetamol (20) and normal Amoxicillin (500)

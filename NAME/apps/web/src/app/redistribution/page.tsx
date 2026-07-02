@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '../../components/common/Sidebar';
 import { getStock, getForecasts, getMatches, createTransfer } from '../../services/api';
 
-interface StockItem { id: number; phc_id: number; medicine: string; quantity: number; expiry_date: string; }
+interface StockItem { id: number; phc_id: number; medicine: string; quantity: number; expiry_date: string; updated_at: string; }
 interface ForecastItem { id: number; medicine: string; risk_score: string; stockout_date: string; }
 interface MatchRec { phc_id: number; phc_name: string; distance_km: number; available_surplus: number; expiry_date: string; similarity_score: number; }
 
