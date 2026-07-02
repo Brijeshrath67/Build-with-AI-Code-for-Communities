@@ -1,3 +1,14 @@
+<<<<<<< Updated upstream
+=======
+import os
+import json
+import threading
+import time
+from dotenv import load_dotenv
+load_dotenv()
+
+import redis
+>>>>>>> Stashed changes
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -14,6 +25,76 @@ app = FastAPI(
     description="Microservice for demand forecasting, semantic matching, and NLP parsing"
 )
 
+<<<<<<< Updated upstream
+=======
+# ── Event Bus Background Consumer ──────────────────────────────────────
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+_r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+STREAM_KEY = "phc:events"
+GROUP = "phc:services"
+REDIS_RETRY_SECONDS = 10
+
+
+def _ensure_group():
+    try:
+        _r.xgroup_create(STREAM_KEY, GROUP, id="0", mkstream=True)
+        return True
+    except redis.ResponseError as exc:
+        # BUSYGROUP means the consumer group already exists; any other response
+        # error should be surfaced so we can see a real Redis configuration issue.
+        if "BUSYGROUP" in str(exc):
+            return True
+        print(f"[EventBus] Failed to create consumer group: {exc}")
+        return False
+    except redis.exceptions.ConnectionError as exc:
+        print(f"[EventBus] Redis unavailable while creating consumer group: {exc}")
+        return False
+
+
+def _handle_event(event_type: str, data: dict):
+    print(f"[EventBus] Received {event_type}: {json.dumps(data)[:100]}")
+    if event_type == "stock.updated":
+        phc_id = data.get("phc_id")
+        if phc_id:
+            print(f"[EventBus] Stock updated for PHC #{phc_id} — triggering forecast refresh...")
+
+
+def _consumer_loop():
+    while True:
+        if not _ensure_group():
+            print(f"[EventBus] Redis unavailable, retrying in {REDIS_RETRY_SECONDS}s...")
+            time.sleep(REDIS_RETRY_SECONDS)
+            continue
+
+        print("[EventBus] Redis consumer connected")
+        while True:
+            try:
+                results = _r.xreadgroup(GROUP, "ai-worker", {STREAM_KEY: ">"}, count=5, block=2000)
+                if not results:
+                    continue
+                for _, messages in results:
+                    for msg_id, fields in messages:
+                        try:
+                            _handle_event(fields.get("type", ""), json.loads(fields.get("data", "{}")))
+                            _r.xack(STREAM_KEY, GROUP, msg_id)
+                        except Exception as e:
+                            print(f"[EventBus] Error processing {msg_id}: {e}")
+            except redis.exceptions.ConnectionError as e:
+                print(f"[EventBus] Redis connection lost: {e}")
+                time.sleep(REDIS_RETRY_SECONDS)
+                break
+            except Exception as e:
+                print(f"[EventBus] Poll error: {e}")
+                time.sleep(2)
+
+
+@app.on_event("startup")
+def start_event_consumer():
+    t = threading.Thread(target=_consumer_loop, daemon=True)
+    t.start()
+    print("[EventBus] Consumer thread started")
+
+>>>>>>> Stashed changes
 # CORS setup
 app.add_middleware(
     CORSMiddleware,
