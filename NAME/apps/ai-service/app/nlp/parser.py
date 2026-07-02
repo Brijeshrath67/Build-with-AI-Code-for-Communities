@@ -87,6 +87,7 @@ def answer_grounded_query(query: str, context: str) -> str:
     """
     if HAS_GEMINI:
         try:
+<<<<<<< Updated upstream
             model = genai.GenerativeModel("gemini-1.5-flash")
             prompt = f"""
             You are a helpful AI logistics assistant for the Primary Health Centre (PHC) Supply Redistribution Network.
@@ -124,3 +125,64 @@ def answer_grounded_query(query: str, context: str) -> str:
         return f"Based on live network data:\n" + "\n".join([f"- {info}" for info in matching_info])
         
     return "I couldn't find a direct answer in the current database context. Could you please specify which medicine or PHC you are asking about?"
+=======
+            system = (
+                "You are a PHC Exchange assistant. Answer using ONLY the provided context. "
+                "Be concise, direct, and factual. Do not add greetings, filler, or extra explanation. "
+                "If the context does not contain the answer, say you cannot find it in the current app data."
+            )
+            raw = _groq_prompt(system, f"Context:\n{context}\n\nQuestion: {query}")
+            return raw.strip()
+        except Exception:
+            pass
+
+    query_lower = query.lower()
+    lines = [line.strip() for line in context.split("\n") if line.strip()]
+    keywords = [w for w in re.findall(r"[a-z0-9]+", query_lower) if len(w) > 2]
+
+    def section_score(line: str) -> int:
+        score = 0
+        lower = line.lower()
+        for kw in keywords:
+            if kw in lower:
+                score += 1
+        return score
+
+    scored = sorted(((section_score(line), idx, line) for idx, line in enumerate(lines)), reverse=True)
+    best_matches = [line for score, _, line in scored if score > 0][:6]
+
+    if any(term in query_lower for term in ["last successful transfer", "latest successful transfer", "last completed transfer"]):
+        for line in lines:
+            if line.lower().startswith("latest completed/rejected transfer:"):
+                return line.removeprefix("Latest completed/rejected transfer: ").strip()
+        for line in lines:
+            if line.lower().startswith("transfer history:") or "completed" in line.lower():
+                return line.replace("Transfer history: ", "").replace(" || ", "\n- ").strip()
+
+    if any(term in query_lower for term in ["transfer history", "transfer ledger", "all transfers", "recent transfers", "history of transfer", "history of transfers", "tell me the history", "give me history", "our transfer history"]):
+        for line in lines:
+            if line.lower().startswith("transfer ledger summary:"):
+                summary = [line]
+                for item in lines:
+                    if item.lower().startswith("transfer history:") or item.lower().startswith("pending transfers:"):
+                        summary.append(item)
+                return "\n".join(summary)
+            if line.lower().startswith("transfer history:"):
+                return line.replace("Transfer history: ", "").replace(" || ", "\n- ").strip()
+
+    if any(term in query_lower for term in ["alert history", "notification history", "alerts"]):
+        for line in lines:
+            if line.lower().startswith("alerts summary:") or line.lower().startswith("active alerts:") or line.lower().startswith("alert history:"):
+                return line
+
+    if best_matches:
+        return "\n".join(best_matches)
+
+    if any(term in query_lower for term in ["hello", "hi", "help", "what can you do"]):
+        return (
+            "I can answer about stock, forecasts, alerts, transfer history, pending requests, PHCs, and doctor assignments. "
+            "Ask a specific question and I’ll answer from the app data."
+        )
+
+    return "I cannot find that in the current app data."
+>>>>>>> Stashed changes

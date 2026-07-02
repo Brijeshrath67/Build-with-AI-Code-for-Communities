@@ -23,10 +23,9 @@ INSERT INTO users (id, name, role, phone, password_hash, phc_id, status) VALUES
 (5, 'District Officer Gupta', 'District Health Official', '5555555555', '$2b$12$62qbR78iUI0J.VS.g3Gy7O8zzV1QfhmyepI2PTit65MNUnQ8baVGS', NULL, 'active');
 
 -- 3. Insert Starting Stocks
--- UPHC Unit-9 has low Paracetamol (20) and normal Amoxicillin (500)
--- UPHC Unit-3 has surplus Paracetamol (800) and low Amoxicillin (10)
--- CHC Nelamangala and PHC Devanahalli have normal levels
+-- Every PHC starts with 500 units of each medicine
 INSERT INTO stock (phc_id, medicine, quantity, expiry_date, sync_status) VALUES
+<<<<<<< Updated upstream
 (1, 'Paracetamol 500mg', 20, '2026-12-31', 'synced'),
 (1, 'Amoxicillin 500mg', 500, '2026-10-31', 'synced'),
 (2, 'Paracetamol 500mg', 800, '2026-12-31', 'synced'),
@@ -35,6 +34,24 @@ INSERT INTO stock (phc_id, medicine, quantity, expiry_date, sync_status) VALUES
 (3, 'Amoxicillin 500mg', 400, '2026-11-30', 'synced'),
 (4, 'Paracetamol 500mg', 250, '2026-08-31', 'synced'), -- Expires soon!
 (4, 'Amoxicillin 500mg', 300, '2027-03-31', 'synced');
+=======
+-- PHC #1: stock reset to 500
+(1, 'Paracetamol 500mg', 500, '2026-12-31', 'synced'),
+(1, 'Amoxicillin 500mg', 500, '2026-10-31', 'synced'),
+(1, 'Metformin 500mg', 500, '2027-06-30', 'synced'),
+-- PHC #2: stock reset to 500
+(2, 'Paracetamol 500mg', 500, '2026-12-31', 'synced'),
+(2, 'Amoxicillin 500mg', 500, '2026-09-30', 'synced'),
+(2, 'Metformin 500mg', 500, '2027-06-30', 'synced'),
+-- PHC #3: stock reset to 500
+(3, 'Paracetamol 500mg', 500, '2027-01-31', 'synced'),
+(3, 'Amoxicillin 500mg', 500, '2026-11-30', 'synced'),
+(3, 'Metformin 500mg', 500, '2027-06-30', 'synced'),
+-- PHC #4: stock reset to 500
+(4, 'Paracetamol 500mg', 500, '2026-08-31', 'synced'),
+(4, 'Amoxicillin 500mg', 500, '2027-03-31', 'synced'),
+(4, 'Metformin 500mg', 500, '2027-06-30', 'synced');
+>>>>>>> Stashed changes
 
 -- 4. Insert Feature Snapshots (Consumption rates)
 -- UPHC Unit-9 consumes 15 Paracetamol/day, 5 Amoxicillin/day

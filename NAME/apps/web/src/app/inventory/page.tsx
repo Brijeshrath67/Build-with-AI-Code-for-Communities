@@ -3,11 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../../components/common/Sidebar';
+<<<<<<< Updated upstream
 import { getStock, updateStock, deleteStock } from '../../services/api';
+=======
+import { getStock, getAllStock, updateStock, deleteStock, getNetworkStatus } from '../../services/api';
+>>>>>>> Stashed changes
 import { useOfflineSync } from '../../hooks/useOfflineSync';
 
 interface StockItem {
   id: number;
+  phc_id: number;
+  phc_name?: string;
   medicine: string;
   quantity: number;
   expiry_date: string;
@@ -15,6 +21,29 @@ interface StockItem {
   updated_at: string;
 }
 
+<<<<<<< Updated upstream
+=======
+interface PhcOption {
+  id: number;
+  name: string;
+  district: string;
+  type: string;
+  stocks?: StockItem[];
+}
+
+const normalizeStockItems = (items: any[]): StockItem[] =>
+  (items || []).map((s, idx) => ({
+    id: s.id ?? idx,
+    phc_id: s.phc_id ?? 0,
+    phc_name: s.phc_name,
+    medicine: s.medicine,
+    quantity: s.quantity,
+    expiry_date: s.expiry_date,
+    sync_status: s.sync_status ?? 'synced',
+    updated_at: s.updated_at ?? '',
+  }));
+
+>>>>>>> Stashed changes
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const MEDICINE_OPTIONS = [
   'Paracetamol 500mg', 'Amoxicillin 500mg', 'Ibuprofen 400mg',
@@ -29,6 +58,13 @@ export default function InventoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [successMsg, setSuccessMsg]   = useState('');
   const [errorMsg, setErrorMsg]       = useState('');
+<<<<<<< Updated upstream
+=======
+  const [selectedPhcId, setSelectedPhcId] = useState<number | ''>('');
+  const [phcList, setPhcList] = useState<PhcOption[]>([]);
+  const [viewAllPhcs, setViewAllPhcs] = useState(false);
+  const skipPhcChangeFetch = useRef(true);
+>>>>>>> Stashed changes
 
   // ── Add / Update modal ──────────────────────────────────────────────────
   const [formOpen, setFormOpen]   = useState(false);
@@ -51,6 +87,7 @@ export default function InventoryPage() {
     if (s) setUser(JSON.parse(s));
   }, []);
 
+<<<<<<< Updated upstream
   useEffect(() => {
     if (!user?.phc_id) { setLoading(false); return; }
     fetchStock();
@@ -64,6 +101,160 @@ export default function InventoryPage() {
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
+=======
+  // ─── Fetch stock for a PHC (DB first, network snapshot as fallback) ───────
+  const fetchStockForPhc = async (phcId: number, phcs?: PhcOption[]) => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await getStock(phcId);
+      setStocks(normalizeStockItems(res.data));
+    } catch (err: any) {
+      console.error('Failed to fetch stock:', err.response?.data || err.message);
+      const list = phcs ?? phcList;
+      const phc = list.find(p => p.id === phcId);
+      if (phc?.stocks?.length) {
+        setStocks(normalizeStockItems(phc.stocks));
+      } else {
+        setStocks([]);
+        setErrorMsg('Could not load stock for this health facility.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAllStock = async () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await getAllStock();
+      setStocks(normalizeStockItems(res.data));
+    } catch (err: any) {
+      console.error('Failed to fetch all PHC stock:', err.response?.data || err.message);
+      setStocks([]);
+      setErrorMsg('Could not load inventory for all PHCs.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshInventory = async () => {
+    const phcId = Number(selectedPhcId);
+    const isDistrictOrAdmin =
+      user?.role === 'District Health Official' || user?.role === 'System Admin';
+
+    if (isDistrictOrAdmin && viewAllPhcs) {
+      await fetchAllStock();
+      return;
+    }
+
+    if (!selectedPhcId) return;
+
+    if (isDistrictOrAdmin) {
+      try {
+        const res = await getNetworkStatus();
+        const list: PhcOption[] = res.data?.phcs || [];
+        setPhcList(list);
+        await fetchStockForPhc(phcId, list);
+        return;
+      } catch {
+        /* fall through to direct stock fetch */
+      }
+    }
+
+    await fetchStockForPhc(phcId);
+  };
+
+  useEffect(() => {
+    if (!user) return;
+
+    let cancelled = false;
+    const isDistrictOrAdmin =
+      user.role === 'District Health Official' || user.role === 'System Admin';
+
+    (async () => {
+      setLoading(true);
+      setErrorMsg('');
+      skipPhcChangeFetch.current = true;
+
+      try {
+        if (isDistrictOrAdmin) {
+          const res = await getNetworkStatus();
+          if (cancelled) return;
+
+          const list: PhcOption[] = res.data?.phcs || [];
+          setPhcList(list);
+
+          if (list.length === 0) {
+            setStocks([]);
+            setLoading(false);
+            return;
+          }
+
+          const initialPhcId = Number(list[0].id);
+          setSelectedPhcId(initialPhcId);
+          setStocks(normalizeStockItems(list[0].stocks || []));
+          await fetchStockForPhc(initialPhcId, list);
+        } else if (user.phc_id) {
+          const phcId = Number(user.phc_id);
+          setSelectedPhcId(phcId);
+
+          // Load network snapshot for PHC name + fallback stock display
+          let networkList: PhcOption[] = [];
+          try {
+            const netRes = await getNetworkStatus();
+            if (cancelled) return;
+            networkList = netRes.data?.phcs || [];
+            setPhcList(networkList);
+            const ownPhc = networkList.find(p => p.id === phcId);
+            if (ownPhc?.stocks?.length) {
+              setStocks(normalizeStockItems(ownPhc.stocks));
+            }
+          } catch {
+            /* getStock below is the primary source */
+          }
+
+          await fetchStockForPhc(phcId, networkList);
+        } else {
+          setStocks([]);
+          setLoading(false);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error('Failed to load inventory', e);
+          setStocks([]);
+          setErrorMsg('Failed to load inventory data. Please check if the backend is running.');
+          setLoading(false);
+        }
+      } finally {
+        if (!cancelled) {
+          skipPhcChangeFetch.current = false;
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // Re-fetch when district official / admin switches PHC in the dropdown
+  useEffect(() => {
+    if (!selectedPhcId || !user || skipPhcChangeFetch.current) return;
+
+    const isDistrictOrAdmin =
+      user.role === 'District Health Official' || user.role === 'System Admin';
+    if (!isDistrictOrAdmin) return;
+    if (viewAllPhcs) return;
+
+    const phcId = Number(selectedPhcId);
+    const phc = phcList.find(p => p.id === phcId);
+    if (phc?.stocks?.length) {
+      setStocks(normalizeStockItems(phc.stocks));
+    }
+    fetchStockForPhc(phcId);
+  }, [selectedPhcId, viewAllPhcs]);
+
+>>>>>>> Stashed changes
 
   const flash = (type: 'ok' | 'err', msg: string) => {
     if (type === 'ok') { setSuccessMsg(msg); setErrorMsg(''); }
@@ -86,7 +277,7 @@ export default function InventoryPage() {
         flash('ok', 'Stock updated successfully!');
         setFormOpen(false);
         setForm({ medicine: '', quantity: '', expiry_date: '' });
-        fetchStock();
+        await refreshInventory();
       } catch (err: any) {
         flash('err', err.response?.data?.detail || 'Update failed');
       }
@@ -119,7 +310,7 @@ export default function InventoryPage() {
       await deleteStock(deleteTarget.id, deletePassword);
       flash('ok', `"${deleteTarget.medicine}" removed from stock.`);
       setDeleteTarget(null);
-      fetchStock();
+      await refreshInventory();
     } catch (err: any) {
       const detail = err.response?.data?.detail || 'Deletion failed.';
       setDeleteError(detail);
@@ -161,7 +352,17 @@ export default function InventoryPage() {
           <div>
             <h1 className="text-2xl font-bold text-white">Inventory Management</h1>
             <p className="text-gray-400 text-sm mt-1">
+<<<<<<< Updated upstream
               {user?.phc_id ? `PHC ${user.phc_id} Stock` : 'District Stock View'} · {stocks.length} items
+=======
+              {viewAllPhcs
+                ? 'All PHC Inventory'
+                : selectedPhc
+                  ? `${selectedPhc.name} · ${selectedPhc.type}`
+                  : user?.phc_id
+                    ? `PHC ${user.phc_id} Stock`
+                    : 'District Stock View'} · {stocks.length} items
+>>>>>>> Stashed changes
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -171,6 +372,48 @@ export default function InventoryPage() {
                 📶 {queueLength} updates queued {isSyncing ? '(syncing...)' : '(offline)'}
               </div>
             )}
+<<<<<<< Updated upstream
+=======
+            <button
+              onClick={() => {
+                const header = 'Medicine,Quantity,Expiry Date\n';
+                const rows = stocks.map(s => `${s.medicine},${s.quantity},${s.expiry_date}`).join('\n');
+                const blob = new Blob([header + rows], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'phc_inventory.csv'; a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa' }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
+              Export CSV
+            </button>
+            <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer"
+              style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#a78bfa' }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 3v12" />
+              </svg>
+              Import CSV
+              <input type="file" accept=".csv" className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0]; if (!file) return;
+                const text = await file.text();
+                const lines = text.split('\n').filter(l => l.trim());
+                const items = lines.slice(1).map(l => {
+                  const [medicine, qty, exp] = l.split(',').map(s => s.trim());
+                  return { medicine, quantity: parseInt(qty), expiry_date: exp };
+                }).filter(it => it.medicine && !isNaN(it.quantity) && it.expiry_date);
+                if (items.length === 0) { flash('err', 'No valid stock entries found in CSV.'); return; }
+                for (const item of items) {
+                  try { await updateStock(item); } catch { /* skip duplicates */ }
+                }
+                flash('ok', `Imported ${items.length} stock entries from CSV.`);
+                await refreshInventory();
+                e.target.value = '';
+              }} />
+            </label>
+>>>>>>> Stashed changes
             {user?.role !== 'District Health Official' && (
               <button id="add-stock-btn" onClick={() => setFormOpen(true)}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white"
@@ -184,6 +427,51 @@ export default function InventoryPage() {
           </div>
         </div>
 
+<<<<<<< Updated upstream
+=======
+        {/* ── PHC Dropdown for District Official / Admin ── */}
+        {user && (user.role === 'District Health Official' || user.role === 'System Admin') && (
+          <div className="mb-6 flex flex-col gap-4 p-4 rounded-xl" style={{ background: 'rgba(17,24,39,0.7)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium text-gray-400">Select Health Facility:</span>
+              <select
+                value={selectedPhcId}
+                onChange={e => setSelectedPhcId(Number(e.target.value))}
+                disabled={viewAllPhcs}
+                className="px-4 py-2.5 rounded-xl text-sm text-white focus:outline-none cursor-pointer"
+                style={{ background: 'rgba(31,41,55,0.8)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                {phcList.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.type} · {p.district})</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => {
+                  setViewAllPhcs(false);
+                  if (selectedPhcId) refreshInventory();
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ background: viewAllPhcs ? 'rgba(255,255,255,0.06)' : 'rgba(16,185,129,0.15)', border: '1px solid rgba(255,255,255,0.08)', color: viewAllPhcs ? '#cbd5e1' : '#a7f3d0' }}
+              >
+                Selected PHC Only
+              </button>
+              <button
+                onClick={() => {
+                  setViewAllPhcs(true);
+                  fetchAllStock();
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ background: viewAllPhcs ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: viewAllPhcs ? '#a7f3d0' : '#cbd5e1' }}
+              >
+                All PHCs
+              </button>
+            </div>
+          </div>
+        )}
+
+>>>>>>> Stashed changes
         {/* ── Flash messages ── */}
         {successMsg && (
           <div className="mb-4 px-4 py-3 rounded-xl text-sm text-emerald-300"
@@ -230,7 +518,7 @@ export default function InventoryPage() {
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                {['Medicine', 'Quantity', 'Stock Status', 'Expiry Date', 'Expiry Status', 'Last Updated', canDelete ? 'Actions' : ''].filter(Boolean).map(h => (
+                {['PHC', 'Medicine', 'Quantity', 'Stock Status', 'Expiry Date', 'Expiry Status', 'Last Updated', canDelete ? 'Actions' : ''].filter(Boolean).map(h => (
                   <th key={h} className="text-left px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-400">{h}</th>
                 ))}
               </tr>
@@ -247,6 +535,7 @@ export default function InventoryPage() {
                   return (
                     <tr key={item.id}
                       style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', background: idx % 2 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                      <td className="px-5 py-4 text-sm text-gray-300">{item.phc_name ?? `PHC ${item.phc_id}`}</td>
                       <td className="px-5 py-4 text-sm font-medium text-white">{item.medicine}</td>
                       <td className="px-5 py-4 text-sm font-bold" style={{ color: stkStat.color }}>{item.quantity.toLocaleString()}</td>
                       <td className="px-5 py-4">

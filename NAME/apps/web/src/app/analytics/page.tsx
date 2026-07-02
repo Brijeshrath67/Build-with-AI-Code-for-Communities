@@ -21,10 +21,23 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const t = localStorage.getItem('phc_token');
-    const s = localStorage.getItem('phc_user');
-    if (!t) { router.push('/login'); return; }
-    if (s) setUser(JSON.parse(s));
+    const token = localStorage.getItem('phc_token');
+    const stored = localStorage.getItem('phc_user');
+    if (!token || !stored) {
+      localStorage.removeItem('phc_token');
+      localStorage.removeItem('phc_user');
+      document.cookie = 'phc_token=; path=/; max-age=0; SameSite=Lax';
+      router.push('/login');
+      return;
+    }
+    try {
+      setUser(JSON.parse(stored));
+    } catch (e) {
+      localStorage.removeItem('phc_token');
+      localStorage.removeItem('phc_user');
+      document.cookie = 'phc_token=; path=/; max-age=0; SameSite=Lax';
+      router.push('/login');
+    }
   }, []);
 
   useEffect(() => {

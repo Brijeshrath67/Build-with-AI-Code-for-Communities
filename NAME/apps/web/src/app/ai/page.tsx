@@ -19,6 +19,9 @@ const SUGGESTION_PROMPTS = [
   "Show me current stockout risks",
   "Which medicines are running critically low?",
   "Is there any transfer pending approval?",
+  "What was our last successful transfer?",
+  "Show me transfer history for this PHC",
+  "What alerts are active right now?",
 ];
 
 export default function AIPage() {
@@ -30,10 +33,23 @@ export default function AIPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const t = localStorage.getItem('phc_token');
-    const s = localStorage.getItem('phc_user');
-    if (!t) { router.push('/login'); return; }
-    if (s) setUser(JSON.parse(s));
+    const token = localStorage.getItem('phc_token');
+    const stored = localStorage.getItem('phc_user');
+    if (!token || !stored) {
+      localStorage.removeItem('phc_token');
+      localStorage.removeItem('phc_user');
+      document.cookie = 'phc_token=; path=/; max-age=0; SameSite=Lax';
+      router.push('/login');
+      return;
+    }
+    try {
+      setUser(JSON.parse(stored));
+    } catch (e) {
+      localStorage.removeItem('phc_token');
+      localStorage.removeItem('phc_user');
+      document.cookie = 'phc_token=; path=/; max-age=0; SameSite=Lax';
+      router.push('/login');
+    }
   }, []);
 
   useEffect(() => {
@@ -42,7 +58,7 @@ export default function AIPage() {
       setMessages([{
         id: 'welcome',
         role: 'assistant',
-        content: `Hello ${user.name}! 👋 I'm your PHC Exchange AI Assistant.\n\nI can help you:\n• Check stock levels at your PHC\n• Find nearby PHCs with surplus medicines\n• Identify expiry risks\n• Answer operational questions about the redistribution network\n\nWhat would you like to know?`,
+        content: `Hello ${user.name}! 👋 I'm your PHC Exchange AI Assistant.\n\nI can answer questions about:\n• Stock levels and shortages\n• Transfer requests, approvals, rejections, and history\n• Active alerts and alert history\n• PHC network details and doctor assignments\n• Forecasts and redistribution status\n\nAsk me a specific question and I’ll keep it direct.`,
         timestamp: new Date(),
       }]);
     }

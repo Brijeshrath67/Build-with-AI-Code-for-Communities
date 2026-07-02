@@ -11,12 +11,28 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Demo credentials for quick login
+  // Demo credentials for quick login — one doctor per PHC (IDs 1-10)
   const demoUsers = [
+<<<<<<< Updated upstream
     { label: 'ASHA Worker', phone: '8888888888', role: 'ASHA Worker' },
     { label: 'PHC Staff (Unit-9)', phone: '7777777777', role: 'PHC Staff' },
     { label: 'District Officer', phone: '5555555555', role: 'District Health Official' },
     { label: 'System Admin', phone: '9999999999', role: 'System Admin' },
+=======
+    { label: 'Dr. Ramesh — PHC #1 (UPHC Unit-9)',     phone: '7777777777', role: 'PHC Staff' },
+    { label: 'Dr. Suresh — PHC #2 (UPHC Unit-3)',     phone: '6666666666', role: 'PHC Staff' },
+    { label: 'Dr. Verma  — PHC #3 (CHC Nelamangala)', phone: '6666666661', role: 'PHC Staff' },
+    { label: 'Dr. Patel  — PHC #4 (PHC Devanahalli)', phone: '6666666662', role: 'PHC Staff' },
+    { label: 'Dr. Sharma — PHC #5 (PHC Yelahanka)',   phone: '6666666663', role: 'PHC Staff' },
+    { label: 'Dr. Kumar  — PHC #6 (UPHC Hebbal)',     phone: '6666666664', role: 'PHC Staff' },
+    { label: 'Dr. Singh  — PHC #7 (CHC Kengeri)',     phone: '6666666665', role: 'PHC Staff' },
+    { label: 'Dr. Mehta  — PHC #8 (PHC Whitefield)',  phone: '6666666668', role: 'PHC Staff' },
+    { label: 'Dr. Rao    — PHC #9 (UPHC Koramangala)',phone: '6666666669', role: 'PHC Staff' },
+    { label: 'Dr. Nair   — PHC #10 (PHC Jayanagar)',  phone: '6666666670', role: 'PHC Staff' },
+    { label: 'Asha Devi (ASHA Worker)',                phone: '8888888888', role: 'ASHA Worker' },
+    { label: 'District Officer Gupta',                 phone: '5555555555', role: 'District Health Official' },
+    { label: 'System Admin',                           phone: '9999999999', role: 'System Admin' },
+>>>>>>> Stashed changes
   ];
 
   useEffect(() => {
@@ -86,6 +102,7 @@ export default function LoginPage() {
             Prevent stockouts and expiry waste by enabling AI-assisted lateral redistribution between nearby Primary Health Centres.
           </p>
 
+<<<<<<< Updated upstream
           {/* Feature pills */}
           <div className="grid grid-cols-2 gap-3">
             {[
@@ -100,6 +117,28 @@ export default function LoginPage() {
                 {feature}
               </div>
             ))}
+=======
+          {/* Features Highlights */}
+          <div className="rounded-xl p-6 text-left" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <span className="text-emerald-400">🛡️</span> Secured Health Portal
+            </h3>
+            <div className="space-y-3">
+              {[
+                { title: "Lateral Medicine Redistribution", desc: "Instantly coordinate transfers with nearest health centers." },
+                { title: "AI Stockout Forecasting", desc: "Machine learning predictions for stock depletion days ahead." },
+                { title: "Real-time Auditable Ledger", desc: "Transparent, tracked dispatch and receipt notifications." }
+              ].map((feat, idx) => (
+                <div key={idx} className="flex gap-3">
+                  <span className="text-emerald-500 mt-1">✓</span>
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">{feat.title}</h4>
+                    <p className="text-xs text-gray-500">{feat.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+>>>>>>> Stashed changes
           </div>
         </div>
       </div>

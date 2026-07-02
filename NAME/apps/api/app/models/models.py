@@ -83,6 +83,9 @@ class Transfer(Base):
     medicine = Column(String, nullable=False)
     quantity = Column(Integer, nullable=False)
     status = Column(String, default="pending", nullable=False) # 'pending', 'approved', 'rejected', 'in_transit', 'completed'
+    message = Column(String, nullable=True)  # Message written by the requester to the supplier
+    decline_reason = Column(String, nullable=True) # Reason given when a request is declined
+    requested_expiry_date = Column(Date, nullable=True) # Expiry date requested by the doctor
     created_at = Column(DateTime(timezone=True), default=func.now())
     approved_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)

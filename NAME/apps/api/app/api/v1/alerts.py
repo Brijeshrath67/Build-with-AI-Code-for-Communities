@@ -27,6 +27,7 @@ def _is_notification_alert(alert: Alert) -> bool:
 def _broadcast_message(db: Session, sender: User, payload: BroadcastMessageCreate) -> int:
     phcs = db.query(PHC).all()
     count = 0
+
     for phc in phcs:
         db.add(
             Alert(
@@ -37,6 +38,7 @@ def _broadcast_message(db: Session, sender: User, payload: BroadcastMessageCreat
             )
         )
         count += 1
+
     db.commit()
     return count
 
@@ -50,7 +52,7 @@ def get_active_alerts(
     if current_user.role in ["ASHA Worker", "PHC Staff"]:
         phc_id = current_user.phc_id
 
-    query = db.query(Alert).filter(Alert.resolved_at == None)
+    query = db.query(Alert).filter(Alert.resolved_at.is_(None))
     if phc_id:
         query = query.filter(Alert.phc_id == phc_id)
     alerts = query.all()
@@ -66,58 +68,69 @@ def get_active_alerts(
     dynamic_alerts = []
     alert_id_counter = 999000
 
-    for s in stocks:
-        phc_name = db.query(PHC.name).filter(PHC.id == s.phc_id).scalar() or "PHC"
+    for stock in stocks:
+        phc_name = db.query(PHC.name).filter(PHC.id == stock.phc_id).scalar() or "PHC"
+        if not stock.expiry_date:
+            stock_expiry = None
+        else:
+            stock_expiry = stock.expiry_date
 
-        if s.expiry_date <= now_date:
-            dynamic_alerts.append(
-                Alert(
-                    id=alert_id_counter,
-                    phc_id=s.phc_id,
-                    message=f"CRITICAL: {s.medicine} in {phc_name} has EXPIRED on {s.expiry_date} (Qty: {s.quantity} units). Please discard.",
-                    severity="high",
-                    created_at=datetime.now(timezone.utc),
+        if stock_expiry:
+            if stock_expiry <= now_date:
+                dynamic_alerts.append(
+                    Alert(
+                        id=alert_id_counter,
+                        phc_id=stock.phc_id,
+                        message=(
+                            f"CRITICAL: {stock.medicine} in {phc_name} has EXPIRED on "
+                            f"{stock_expiry} (Qty: {stock.quantity} units). Please discard."
+                        ),
+                        severity="high",
+                        created_at=datetime.now(timezone.utc),
+                    )
                 )
-            )
-            alert_id_counter += 1
-        elif s.expiry_date <= expiry_threshold:
+                alert_id_counter += 1
+            elif stock_expiry <= expiry_threshold:
+                dynamic_alerts.append(
+                    Alert(
+                        id=alert_id_counter,
+                        phc_id=stock.phc_id,
+                        message=(
+                            f"WARNING: {stock.medicine} in {phc_name} expires on {stock_expiry} "
+                            f"({stock.quantity} units remaining). Plan redistribution."
+                        ),
+                        severity="medium",
+                        created_at=datetime.now(timezone.utc),
+                    )
+                )
+                alert_id_counter += 1
+
+        if stock.quantity <= 20 and stock.quantity > 0:
             dynamic_alerts.append(
                 Alert(
                     id=alert_id_counter,
-                    phc_id=s.phc_id,
-                    message=f"WARNING: {s.medicine} in {phc_name} expires on {s.expiry_date} ({s.quantity} units remaining). Plan redistribution.",
+                    phc_id=stock.phc_id,
+                    message=f"ALERT: Low stock of {stock.medicine} in {phc_name}. Only {stock.quantity} units left.",
                     severity="medium",
                     created_at=datetime.now(timezone.utc),
                 )
             )
             alert_id_counter += 1
-
-        if s.quantity <= 20 and s.quantity > 0:
+        elif stock.quantity == 0:
             dynamic_alerts.append(
                 Alert(
                     id=alert_id_counter,
-                    phc_id=s.phc_id,
-                    message=f"ALERT: Low stock of {s.medicine} in {phc_name}. Only {s.quantity} units left.",
-                    severity="medium",
-                    created_at=datetime.now(timezone.utc),
-                )
-            )
-            alert_id_counter += 1
-        elif s.quantity == 0:
-            dynamic_alerts.append(
-                Alert(
-                    id=alert_id_counter,
-                    phc_id=s.phc_id,
-                    message=f"CRITICAL: {s.medicine} in {phc_name} is OUT OF STOCK.",
+                    phc_id=stock.phc_id,
+                    message=f"CRITICAL: {stock.medicine} in {phc_name} is OUT OF STOCK.",
                     severity="high",
                     created_at=datetime.now(timezone.utc),
                 )
             )
             alert_id_counter += 1
 
-    low_stock_items = [s for s in stocks if s.quantity <= 50 and s.expiry_date > now_date]
-    for s in low_stock_items[:5]:
-        phc_obj = db.query(PHC).filter(PHC.id == s.phc_id).first()
+    low_stock_items = [stock for stock in stocks if stock.quantity <= 50 and stock.expiry_date and stock.expiry_date > now_date]
+    for stock in low_stock_items[:5]:
+        phc_obj = db.query(PHC).filter(PHC.id == stock.phc_id).first()
         if not phc_obj:
             continue
 
@@ -125,8 +138,8 @@ def get_active_alerts(
             db.query(Stock, PHC)
             .join(PHC, Stock.phc_id == PHC.id)
             .filter(
-                Stock.medicine == s.medicine,
-                Stock.phc_id != s.phc_id,
+                Stock.medicine == stock.medicine,
+                Stock.phc_id != stock.phc_id,
                 Stock.quantity >= 50,
                 Stock.expiry_date > now_date,
             )
@@ -155,9 +168,12 @@ def get_active_alerts(
             dynamic_alerts.append(
                 Alert(
                     id=alert_id_counter,
-                    phc_id=s.phc_id,
-                    message=f"TRANSFER RECOMMENDED: {phc_name} needs {s.medicine} (only {s.quantity} left). "
-                    f"{src_phc.name} has {src_stock.quantity} surplus units ({dist:.1f}km away).",
+                    phc_id=stock.phc_id,
+                    message=(
+                        f"TRANSFER RECOMMENDED: {phc_name} needs {stock.medicine} "
+                        f"(only {stock.quantity} left). {src_phc.name} has {src_stock.quantity} "
+                        f"surplus units ({dist:.1f}km away)."
+                    ),
                     severity="medium",
                     created_at=datetime.now(timezone.utc),
                 )
@@ -205,7 +221,7 @@ def get_alert_history(
     if current_user.role in ["ASHA Worker", "PHC Staff"]:
         phc_id = current_user.phc_id
 
-    query = db.query(Alert).filter(Alert.resolved_at != None)
+    query = db.query(Alert).filter(Alert.resolved_at.is_not(None))
     if phc_id:
         query = query.filter(Alert.phc_id == phc_id)
     return query.order_by(Alert.resolved_at.desc()).all()
@@ -220,10 +236,13 @@ def get_notification_inbox(
     if current_user.role in ["ASHA Worker", "PHC Staff"]:
         phc_id = current_user.phc_id
 
-    query = db.query(Alert).filter(Alert.resolved_at == None)
+    query = db.query(Alert).filter(Alert.resolved_at.is_(None))
     if phc_id:
         query = query.filter(Alert.phc_id == phc_id)
-    query = query.filter(_is_notification_alert(Alert))
+
+    query = query.filter(
+        (Alert.message.startswith("[TRANSFER]")) | (Alert.message.startswith("[DHO]"))
+    )
     return query.order_by(Alert.created_at.desc()).all()
 
 
@@ -236,10 +255,13 @@ def get_notification_history(
     if current_user.role in ["ASHA Worker", "PHC Staff"]:
         phc_id = current_user.phc_id
 
-    query = db.query(Alert).filter(Alert.resolved_at != None)
+    query = db.query(Alert).filter(Alert.resolved_at.is_not(None))
     if phc_id:
         query = query.filter(Alert.phc_id == phc_id)
-    query = query.filter(_is_notification_alert(Alert))
+
+    query = query.filter(
+        (Alert.message.startswith("[TRANSFER]")) | (Alert.message.startswith("[DHO]"))
+    )
     return query.order_by(Alert.resolved_at.desc()).all()
 
 

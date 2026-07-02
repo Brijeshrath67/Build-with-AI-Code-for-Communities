@@ -59,6 +59,7 @@ class StockUpdate(BaseModel):
 class StockResponse(BaseModel):
     id: int
     phc_id: int
+    phc_name: Optional[str] = None
     medicine: str
     quantity: int
     expiry_date: date

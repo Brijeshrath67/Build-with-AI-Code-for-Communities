@@ -26,8 +26,21 @@ export default function DashboardPage() {
   useEffect(() => {
     const token = localStorage.getItem('phc_token');
     const stored = localStorage.getItem('phc_user');
-    if (!token) { router.push('/login'); return; }
-    if (stored) setUser(JSON.parse(stored));
+    if (!token || !stored) {
+      localStorage.removeItem('phc_token');
+      localStorage.removeItem('phc_user');
+      document.cookie = 'phc_token=; path=/; max-age=0; SameSite=Lax';
+      router.push('/login');
+      return;
+    }
+    try {
+      setUser(JSON.parse(stored));
+    } catch (e) {
+      localStorage.removeItem('phc_token');
+      localStorage.removeItem('phc_user');
+      document.cookie = 'phc_token=; path=/; max-age=0; SameSite=Lax';
+      router.push('/login');
+    }
   }, []);
 
   useEffect(() => {
@@ -35,31 +48,38 @@ export default function DashboardPage() {
     const phcId = user.phc_id;
 
     const fetchData = async () => {
-      try {
-        const [alertsRes, transfersRes] = await Promise.all([
-          getActiveAlerts(phcId),
-          getTransferLedger(),
-        ]);
-        setAlerts(alertsRes.data?.slice(0, 5) || []);
-        setTransfers(transfersRes.data?.slice(0, 5) || []);
+      // Load alerts and transfers first (don't block on PHC-specific data)
+      const [alertsResult, transfersResult] = await Promise.allSettled([
+        getActiveAlerts(phcId),
+        getTransferLedger(),
+      ]);
+      if (alertsResult.status === 'fulfilled') setAlerts(alertsResult.value.data?.slice(0, 5) || []);
+      if (transfersResult.status === 'fulfilled') setTransfers(transfersResult.value.data?.slice(0, 5) || []);
 
-        if (phcId) {
-          const [forecastsRes, stocksRes] = await Promise.all([
-            getForecasts(phcId),
-            getStock(phcId),
-          ]);
-          setForecasts(forecastsRes.data || []);
-          setStocks(stocksRes.data || []);
+      // Load stock and forecasts independently — each failure is caught separately
+      if (phcId) {
+        const [forecastsResult, stocksResult] = await Promise.allSettled([
+          getForecasts(phcId),
+          getStock(phcId),
+        ]);
+        if (forecastsResult.status === 'fulfilled') {
+          setForecasts(forecastsResult.value.data || []);
+        } else {
+          console.warn('Forecasts failed to load:', forecastsResult.reason);
         }
-      } catch (err) {
-        console.error('Dashboard data fetch error', err);
-      } finally {
-        setLoading(false);
+        if (stocksResult.status === 'fulfilled') {
+          setStocks(stocksResult.value.data || []);
+        } else {
+          console.warn('Stocks failed to load:', stocksResult.reason);
+        }
       }
+
+      setLoading(false);
     };
 
     fetchData();
   }, [user]);
+
 
   const highRiskCount = forecasts.filter(f => f.risk_score === 'HIGH').length;
   const medRiskCount = forecasts.filter(f => f.risk_score === 'MEDIUM').length;

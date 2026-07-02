@@ -10,6 +10,49 @@ from datetime import datetime, timezone
 router = APIRouter()
 
 # Allow ASHA Workers, PHC Staff, District Officials, and Admins to view stock
+@router.get("", response_model=List[StockResponse])
+def list_stocks(
+    phc_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    if phc_id is not None:
+        if current_user.role in ["ASHA Worker", "PHC Staff"] and current_user.phc_id != phc_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You only have access to view your own PHC's stock."
+            )
+        return db.query(Stock).filter(Stock.phc_id == phc_id).all()
+
+    if current_user.role in ["District Health Official", "System Admin"]:
+        stocks = db.query(Stock).all()
+        return [
+            {
+                "id": s.id,
+                "phc_id": s.phc_id,
+                "phc_name": s.phc.name if s.phc else None,
+                "medicine": s.medicine,
+                "quantity": s.quantity,
+                "expiry_date": s.expiry_date,
+                "updated_at": s.updated_at,
+                "sync_status": s.sync_status,
+            }
+            for s in stocks
+        ]
+
+    if current_user.role in ["ASHA Worker", "PHC Staff"]:
+        if not current_user.phc_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User is not assigned to a PHC."
+            )
+        return db.query(Stock).filter(Stock.phc_id == current_user.phc_id).all()
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Insufficient permissions to view stock."
+    )
+
 @router.get("/{phc_id}", response_model=List[StockResponse])
 def get_phc_stock(
     phc_id: int, 
