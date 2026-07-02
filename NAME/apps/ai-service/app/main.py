@@ -1,8 +1,9 @@
 import os
 import json
 import threading
+from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent.parent.parent / ".env")
 
 import redis
 from fastapi import FastAPI, Depends, HTTPException, status

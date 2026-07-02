@@ -62,7 +62,7 @@ def answer_grounded_query(query: str, context: str) -> str:
     """Answers a natural-language query using database context as grounding."""
     if _use_groq:
         try:
-            system = "You are a PHC Exchange assistant. Answer concisely using ONLY the provided context. If the context doesn't contain the answer, say so."
+            system = "You are a PHC Exchange assistant. Answer naturally and helpfully using the provided context. The context includes live stock levels, transfer history, health centre information, and AI forecasts. If the user asks something not in the context, use your general knowledge to help them, but clearly note when you're not relying on live data."
             raw = _groq_prompt(system, f"Context:\n{context}\n\nQuestion: {query}")
             return raw
         except Exception:

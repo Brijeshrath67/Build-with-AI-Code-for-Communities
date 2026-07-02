@@ -49,6 +49,17 @@ def handle_natural_language_query(
     transfers = db.query(Transfer).filter(Transfer.status.in_(["pending", "in_transit"])).all()
     transfer_list = ", ".join([f"{t.quantity} units of {t.medicine} from PHC {t.source_phc_id} to PHC {t.destination_phc_id} (status: {t.status})" for t in transfers])
     context_parts.append(f"Active transfers in progress: {transfer_list if transfer_list else 'None'}.")
+
+    # Recent completed transfers
+    completed = db.query(Transfer).filter(Transfer.status == "completed").order_by(Transfer.approved_at.desc()).limit(10).all()
+    if completed:
+        completed_list = ", ".join([
+            f"{t.quantity} units of {t.medicine} from PHC {t.source_phc_id} to PHC {t.destination_phc_id} (completed at {t.approved_at})"
+            for t in completed
+        ])
+        context_parts.append(f"Recent completed transfers: {completed_list}.")
+    else:
+        context_parts.append("No completed transfers found.")
     
     db_context = "\n".join(context_parts)
     
